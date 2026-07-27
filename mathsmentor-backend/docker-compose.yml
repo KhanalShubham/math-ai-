@@ -1,0 +1,44 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - '11434:11434'
+    volumes:
+      - ollama-data:/root/.ollama
+
+  backend:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - mongo
+      - redis
+    ports:
+      - '4000:4000'
+    env_file:
+      - .env
+    environment:
+      MONGO_URI: mongodb://mongo:27017/mathsmentor
+      REDIS_URL: redis://redis:6379
+      OLLAMA_BASE_URL: http://ollama:11434
+
+volumes:
+  mongo-data:
+  redis-data:
+  ollama-data:

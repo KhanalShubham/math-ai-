@@ -1,0 +1,8 @@
+# study-plan — scaffolded, no business logic yet
+
+Phase 8 — generates rationale TEXT for domain/curriculum's already-decided recommendations; never decides what to recommend (ARCHITECTURE.md §14, constraint #1 analogue).
+
+This folder is intentionally empty of implementation. Per the agreed roadmap
+(see ARCHITECTURE.md and the user's phase plan), business logic for this
+module/domain area is built in its own phase, against the contracts already
+frozen in ARCHITECTURE.md and DOMAIN_MODEL.md — not ad hoc.
