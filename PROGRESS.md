@@ -8,21 +8,30 @@ state is visible without re-scanning the codebase. Newest entry on top.
 | | |
 |---|---|
 | **Current Version** | v0.3.0 |
-| **Architecture Version** | v1 (Frozen — see `ARCHITECTURE.md`) |
 | **Current Branch** | main |
-| **Latest Commit** | `4ee5b82` |
+| **Latest Commit** | `1c606d2` |
 | **Backend Modules Complete** | 3 / 10 |
 | **Overall Progress** | ~30% |
 | **Test Status** | 86/86 passing (10 suites) |
 | **TypeScript** | clean |
 | **ESLint** | clean |
-| **Active Milestone** | Diagnostic module |
 
-**Next Commit Goal**
-Implement `DiagnosticAttempt` repository (DOMAIN_MODEL.md §2.7):
-- `diagnostic.repository.interface.ts`
-- Mongoose model + repository
-- `curriculum.service`-style unit tests (fake repo)
+**Milestone Progress**
+```
+██████████░░░░░░░░░░░░░░░░░░░░ 30%
+```
+
+**Active Milestone**
+Diagnostic module
+
+**Current Task**
+Implement `DiagnosticAttempt` repository (DOMAIN_MODEL.md §2.7): `diagnostic.repository.interface.ts` + Mongoose model/repository
+
+**Next Task**
+Diagnostic service (grading hook, `findInProgressForStudent` enforcement, `DiagnosticCompleted` event)
+
+**Then**
+Zod validation → controller → routes → unit tests → integration tests → commit
 
 **Project Health**
 - ✅ Build passing
@@ -31,6 +40,11 @@ Implement `DiagnosticAttempt` repository (DOMAIN_MODEL.md §2.7):
 - ✅ Types clean
 - ⚠️ OpenAPI incomplete (Student/Curriculum undocumented)
 - ⚠️ Deployment/observability not yet started
+
+**Architecture Status**
+- ✅ Stable
+- 🔒 Frozen (v1 — see `ARCHITECTURE.md`)
+- Last Reviewed: 2026-07-28
 
 **Repository Metrics**
 | | |
@@ -90,15 +104,18 @@ Implement `DiagnosticAttempt` repository (DOMAIN_MODEL.md §2.7):
 
 ## 2026-07-28 — Curriculum module complete
 
-**Status:** TypeScript clean · ESLint clean · 86/86 tests passing (10 suites) · committed locally (`c027d58`, not yet pushed)
+**Status:** TypeScript clean · ESLint clean · 86/86 tests passing (10 suites) · pushed to `origin/main` (`1c606d2`)
 
 **Completed this session**
-- **Curriculum module** — `Topic` (prerequisite DAG, cycle-checked in `curriculum.service.addPrerequisite` via BFS before write — MongoDB can't express that constraint) and `Question` (answerKey `select:false` at the schema level, stripped by `toPublicQuestion` everywhere except the admin-only internal read path). All authoring routes (create/publish/retire/prerequisites) are admin-only; reads open to any authenticated role.
+- **Curriculum module** (`c027d58`) — `Topic` (prerequisite DAG, cycle-checked in `curriculum.service.addPrerequisite` via BFS before write — MongoDB can't express that constraint) and `Question` (answerKey `select:false` at the schema level, stripped by `toPublicQuestion` everywhere except the admin-only internal read path). All authoring routes (create/publish/retire/prerequisites) are admin-only; reads open to any authenticated role.
 - Removed the stale `src/modules/curriculum/README.md` scaffold placeholder now that it's implemented.
-- Restructured this file with a Quick Reference block (version/branch/commit/test status/frozen decisions/tech debt) per the agreed workflow: read progress.md → confirm active milestone → implement only that milestone → update progress.md → run TypeScript/ESLint/tests → commit → repeat.
+- `4ee5b82` — restructured this file with a Quick Reference block per the agreed workflow: read progress.md → confirm active milestone → implement only that milestone → update progress.md → run TypeScript/ESLint/tests → commit → repeat.
+- `1c606d2` — extended the Quick Reference with roadmap, health, metrics, risks, and module-completion sections (reviewer feedback).
 
 **Repo commits so far**
 ```
+1c606d2 Extend PROGRESS.md with roadmap, health, risks, and metrics sections
+4ee5b82 Add PROGRESS.md checkpoint log and update for Curriculum module
 c027d58 Add Curriculum module (Topic graph + Question bank)
 f484bb5 Add Student module (profile CRUD, class/parent lookups)
 b66b1f4 Add root .gitignore
