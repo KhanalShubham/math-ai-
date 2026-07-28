@@ -27,6 +27,17 @@ export interface RefreshToken {
   replacedByTokenHash: string | null;
 }
 
+export type VerificationTokenType = 'email_verification' | 'password_reset';
+
+export interface VerificationToken {
+  id: string;
+  userId: string;
+  type: VerificationTokenType;
+  tokenHash: string;
+  expiresAt: Date;
+  usedAt: Date | null;
+}
+
 export interface JwtAccessPayload {
   sub: string;
   role: UserRole;

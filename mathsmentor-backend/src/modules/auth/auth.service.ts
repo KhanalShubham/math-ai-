@@ -1,7 +1,11 @@
 import { logger } from '../../infrastructure/logging/logger';
 import type { EventBus } from '../../infrastructure/events/event-bus.interface';
 import { AuthenticationError, ConflictError } from '../../errors';
-import type { RefreshTokenRepository, UserRepository } from './auth.repository.interface';
+import type {
+  RefreshTokenRepository,
+  UserRepository,
+  VerificationTokenRepository,
+} from './auth.repository.interface';
 import type { AuthTokens, User, UserRole } from './auth.types';
 import { hashPassword, verifyPassword } from './password';
 import {
@@ -39,6 +43,7 @@ export interface AuthService {
 export interface AuthServiceDeps {
   userRepository: UserRepository;
   refreshTokenRepository: RefreshTokenRepository;
+  verificationTokenRepository: VerificationTokenRepository;
   eventBus: EventBus;
 }
 
@@ -77,11 +82,12 @@ export function createAuthService(deps: AuthServiceDeps): AuthService {
       const user = await deps.userRepository.create({ email, passwordHash, role });
 
       const rawToken = generateOpaqueToken();
-      await deps.userRepository.setEmailVerificationToken(
-        user.id,
-        hashToken(rawToken),
-        new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
-      );
+      await deps.verificationTokenRepository.create({
+        userId: user.id,
+        type: 'email_verification',
+        tokenHash: hashToken(rawToken),
+        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
+      });
 
       // Phase 9 (notification module) will subscribe to this and actually send mail.
       logger.info({ userId: user.id, email: user.email }, 'Would send verification email');
@@ -163,11 +169,15 @@ export function createAuthService(deps: AuthServiceDeps): AuthService {
     },
 
     async verifyEmail(rawToken) {
-      const user = await deps.userRepository.findByEmailVerificationTokenHash(hashToken(rawToken));
-      if (!user) {
+      const token = await deps.verificationTokenRepository.findValidByTokenHash(
+        'email_verification',
+        hashToken(rawToken),
+      );
+      if (!token) {
         throw new AuthenticationError('Invalid or expired verification token');
       }
-      await deps.userRepository.markEmailVerified(user.id);
+      await deps.verificationTokenRepository.markUsed(token.id);
+      await deps.userRepository.markEmailVerified(token.userId);
     },
 
     async requestPasswordReset(email) {
@@ -179,11 +189,13 @@ export function createAuthService(deps: AuthServiceDeps): AuthService {
       }
 
       const rawToken = generateOpaqueToken();
-      await deps.userRepository.setPasswordResetToken(
-        existing.id,
-        hashToken(rawToken),
-        new Date(Date.now() + PASSWORD_RESET_TTL_MS),
-      );
+      await deps.verificationTokenRepository.invalidateAllForUser(existing.id, 'password_reset');
+      await deps.verificationTokenRepository.create({
+        userId: existing.id,
+        type: 'password_reset',
+        tokenHash: hashToken(rawToken),
+        expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
+      });
 
       logger.info({ userId: existing.id }, 'Would send password reset email');
       await deps.eventBus.publish(AUTH_EVENTS.PasswordResetRequested, {
@@ -194,18 +206,21 @@ export function createAuthService(deps: AuthServiceDeps): AuthService {
     },
 
     async resetPassword(rawToken, newPassword) {
-      const user = await deps.userRepository.findByPasswordResetTokenHash(hashToken(rawToken));
-      if (!user) {
+      const token = await deps.verificationTokenRepository.findValidByTokenHash(
+        'password_reset',
+        hashToken(rawToken),
+      );
+      if (!token) {
         throw new AuthenticationError('Invalid or expired reset token');
       }
 
       const passwordHash = await hashPassword(newPassword);
-      await deps.userRepository.updatePassword(user.id, passwordHash);
-      await deps.userRepository.clearPasswordResetToken(user.id);
+      await deps.userRepository.updatePassword(token.userId, passwordHash);
+      await deps.verificationTokenRepository.markUsed(token.id);
       // Force re-login everywhere — a leaked/guessed old session should not
       // survive a password reset.
-      await deps.refreshTokenRepository.revokeAllForUser(user.id);
-      await deps.eventBus.publish(AUTH_EVENTS.PasswordChanged, { userId: user.id });
+      await deps.refreshTokenRepository.revokeAllForUser(token.userId);
+      await deps.eventBus.publish(AUTH_EVENTS.PasswordChanged, { userId: token.userId });
     },
   };
 }

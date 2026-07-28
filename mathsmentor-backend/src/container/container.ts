@@ -5,6 +5,7 @@ import type { JobQueue } from '../infrastructure/jobs/job-queue.interface';
 import { logger } from '../infrastructure/logging/logger';
 import { MongoUserRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-user.repository';
 import { MongoRefreshTokenRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-refresh-token.repository';
+import { MongoVerificationTokenRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-verification-token.repository';
 import { createAuthService, type AuthService } from '../modules/auth/auth.service';
 
 /**
@@ -30,7 +31,13 @@ export function createContainer(): Container {
 
   const userRepository = new MongoUserRepository();
   const refreshTokenRepository = new MongoRefreshTokenRepository();
-  const authService = createAuthService({ userRepository, refreshTokenRepository, eventBus });
+  const verificationTokenRepository = new MongoVerificationTokenRepository();
+  const authService = createAuthService({
+    userRepository,
+    refreshTokenRepository,
+    verificationTokenRepository,
+    eventBus,
+  });
 
   return {
     logger,

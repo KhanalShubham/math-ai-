@@ -9,10 +9,18 @@ import {
 import type {
   CreateRefreshTokenInput,
   CreateUserInput,
+  CreateVerificationTokenInput,
   RefreshTokenRepository,
   UserRepository,
+  VerificationTokenRepository,
 } from '../../src/modules/auth/auth.repository.interface';
-import type { RefreshToken, User, UserWithCredentials } from '../../src/modules/auth/auth.types';
+import type {
+  RefreshToken,
+  User,
+  UserWithCredentials,
+  VerificationToken,
+  VerificationTokenType,
+} from '../../src/modules/auth/auth.types';
 
 function fakeId(): string {
   return randomBytes(12).toString('hex');
@@ -20,8 +28,6 @@ function fakeId(): string {
 
 class FakeUserRepository implements UserRepository {
   private readonly users = new Map<string, UserWithCredentials>();
-  private readonly emailVerificationTokens = new Map<string, { userId: string; expiresAt: Date }>();
-  private readonly passwordResetTokens = new Map<string, { userId: string; expiresAt: Date }>();
 
   async findById(id: string): Promise<User | null> {
     const user = this.users.get(id);
@@ -77,34 +83,49 @@ class FakeUserRepository implements UserRepository {
     if (user) user.status = status;
   }
 
-  async setEmailVerificationToken(id: string, tokenHash: string, expiresAt: Date): Promise<void> {
-    this.emailVerificationTokens.set(tokenHash, { userId: id, expiresAt });
-  }
-
-  async findByEmailVerificationTokenHash(tokenHash: string): Promise<User | null> {
-    const entry = this.emailVerificationTokens.get(tokenHash);
-    if (!entry || entry.expiresAt < new Date()) return null;
-    return this.findById(entry.userId);
-  }
-
   async markEmailVerified(id: string): Promise<void> {
     const user = this.users.get(id);
     if (user) user.emailVerifiedAt = new Date();
   }
+}
 
-  async setPasswordResetToken(id: string, tokenHash: string, expiresAt: Date): Promise<void> {
-    this.passwordResetTokens.set(tokenHash, { userId: id, expiresAt });
+class FakeVerificationTokenRepository implements VerificationTokenRepository {
+  private readonly tokens = new Map<string, VerificationToken>();
+
+  async create(input: CreateVerificationTokenInput): Promise<VerificationToken> {
+    const token: VerificationToken = {
+      id: fakeId(),
+      userId: input.userId,
+      type: input.type,
+      tokenHash: input.tokenHash,
+      expiresAt: input.expiresAt,
+      usedAt: null,
+    };
+    this.tokens.set(token.id, token);
+    return token;
   }
 
-  async findByPasswordResetTokenHash(tokenHash: string): Promise<User | null> {
-    const entry = this.passwordResetTokens.get(tokenHash);
-    if (!entry || entry.expiresAt < new Date()) return null;
-    return this.findById(entry.userId);
+  async findValidByTokenHash(
+    type: VerificationTokenType,
+    tokenHash: string,
+  ): Promise<VerificationToken | null> {
+    const token = [...this.tokens.values()].find(
+      (t) => t.type === type && t.tokenHash === tokenHash,
+    );
+    if (!token || token.usedAt || token.expiresAt < new Date()) return null;
+    return token;
   }
 
-  async clearPasswordResetToken(id: string): Promise<void> {
-    for (const [hash, entry] of this.passwordResetTokens) {
-      if (entry.userId === id) this.passwordResetTokens.delete(hash);
+  async markUsed(id: string): Promise<void> {
+    const token = this.tokens.get(id);
+    if (token) token.usedAt = new Date();
+  }
+
+  async invalidateAllForUser(userId: string, type: VerificationTokenType): Promise<void> {
+    for (const token of this.tokens.values()) {
+      if (token.userId === userId && token.type === type && !token.usedAt) {
+        token.usedAt = new Date();
+      }
     }
   }
 }
@@ -147,9 +168,15 @@ class FakeRefreshTokenRepository implements RefreshTokenRepository {
 function buildService() {
   const userRepository = new FakeUserRepository();
   const refreshTokenRepository = new FakeRefreshTokenRepository();
+  const verificationTokenRepository = new FakeVerificationTokenRepository();
   const eventBus = new InProcessEventBus();
-  const service = createAuthService({ userRepository, refreshTokenRepository, eventBus });
-  return { service, userRepository, refreshTokenRepository, eventBus };
+  const service = createAuthService({
+    userRepository,
+    refreshTokenRepository,
+    verificationTokenRepository,
+    eventBus,
+  });
+  return { service, userRepository, refreshTokenRepository, verificationTokenRepository, eventBus };
 }
 
 const NO_META = { userAgent: null, ipAddress: null };
@@ -459,18 +486,19 @@ describe('auth.service', () => {
   });
 
   it('rejects a password reset with an expired token', async () => {
-    const { service, userRepository } = buildService();
+    const { service, verificationTokenRepository } = buildService();
     const { user } = await service.register(
       'expiredreset@example.com',
       'correct-horse-battery',
       'student',
     );
     const rawToken = generateOpaqueToken();
-    await userRepository.setPasswordResetToken(
-      user.id,
-      hashToken(rawToken),
-      new Date(Date.now() - 1000),
-    );
+    await verificationTokenRepository.create({
+      userId: user.id,
+      type: 'password_reset',
+      tokenHash: hashToken(rawToken),
+      expiresAt: new Date(Date.now() - 1000),
+    });
 
     await expect(service.resetPassword(rawToken, 'a-brand-new-password')).rejects.toMatchObject({
       code: 'AUTHENTICATION_ERROR',

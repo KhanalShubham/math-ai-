@@ -74,48 +74,7 @@ export class MongoUserRepository implements UserRepository {
     await UserModel.findByIdAndUpdate(id, { passwordHash }).exec();
   }
 
-  async setEmailVerificationToken(id: string, tokenHash: string, expiresAt: Date): Promise<void> {
-    await UserModel.findByIdAndUpdate(id, {
-      emailVerificationTokenHash: tokenHash,
-      emailVerificationExpiresAt: expiresAt,
-    }).exec();
-  }
-
-  async findByEmailVerificationTokenHash(tokenHash: string): Promise<User | null> {
-    const doc = await UserModel.findOne({
-      emailVerificationTokenHash: tokenHash,
-      emailVerificationExpiresAt: { $gt: new Date() },
-    }).exec();
-    return doc ? toUser(doc) : null;
-  }
-
   async markEmailVerified(id: string): Promise<void> {
-    await UserModel.findByIdAndUpdate(id, {
-      emailVerifiedAt: new Date(),
-      emailVerificationTokenHash: null,
-      emailVerificationExpiresAt: null,
-    }).exec();
-  }
-
-  async setPasswordResetToken(id: string, tokenHash: string, expiresAt: Date): Promise<void> {
-    await UserModel.findByIdAndUpdate(id, {
-      passwordResetTokenHash: tokenHash,
-      passwordResetExpiresAt: expiresAt,
-    }).exec();
-  }
-
-  async findByPasswordResetTokenHash(tokenHash: string): Promise<User | null> {
-    const doc = await UserModel.findOne({
-      passwordResetTokenHash: tokenHash,
-      passwordResetExpiresAt: { $gt: new Date() },
-    }).exec();
-    return doc ? toUser(doc) : null;
-  }
-
-  async clearPasswordResetToken(id: string): Promise<void> {
-    await UserModel.findByIdAndUpdate(id, {
-      passwordResetTokenHash: null,
-      passwordResetExpiresAt: null,
-    }).exec();
+    await UserModel.findByIdAndUpdate(id, { emailVerifiedAt: new Date() }).exec();
   }
 }
