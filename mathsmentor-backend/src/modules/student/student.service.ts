@@ -10,12 +10,16 @@ import { STUDENT_EVENTS } from './student.events';
 
 export interface StudentService {
   createProfile(input: CreateStudentProfileInput): Promise<StudentProfile>;
+  getById(id: string): Promise<StudentProfile>;
   getByUserId(userId: string): Promise<StudentProfile>;
   getByClassId(classId: string): Promise<StudentProfile[]>;
   getByParentId(parentId: string): Promise<StudentProfile[]>;
   updateProfile(userId: string, patch: UpdateStudentProfileInput): Promise<StudentProfile>;
   updateEstimatedGrade(studentId: string, grade: number): Promise<void>;
   addParentLink(studentId: string, parentUserId: string): Promise<void>;
+  removeParentLink(studentId: string, parentUserId: string): Promise<void>;
+  addClassLink(studentId: string, classId: string): Promise<void>;
+  removeClassLink(studentId: string, classId: string): Promise<void>;
 }
 
 export interface StudentServiceDeps {
@@ -37,6 +41,14 @@ export function createStudentService(deps: StudentServiceDeps): StudentService {
         userId: profile.userId,
       });
 
+      return profile;
+    },
+
+    async getById(id) {
+      const profile = await deps.studentRepository.findById(id);
+      if (!profile) {
+        throw new NotFoundError('Student profile not found');
+      }
       return profile;
     },
 
@@ -74,6 +86,18 @@ export function createStudentService(deps: StudentServiceDeps): StudentService {
 
     async addParentLink(studentId, parentUserId) {
       await deps.studentRepository.addParentLink(studentId, parentUserId);
+    },
+
+    async removeParentLink(studentId, parentUserId) {
+      await deps.studentRepository.removeParentLink(studentId, parentUserId);
+    },
+
+    async addClassLink(studentId, classId) {
+      await deps.studentRepository.addClassLink(studentId, classId);
+    },
+
+    async removeClassLink(studentId, classId) {
+      await deps.studentRepository.removeClassLink(studentId, classId);
     },
   };
 }

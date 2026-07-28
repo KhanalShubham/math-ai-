@@ -38,6 +38,8 @@ export interface AuthService {
   verifyEmail(rawToken: string): Promise<void>;
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(rawToken: string, newPassword: string): Promise<void>;
+  /** Read-only lookup (no passwordHash) — used by parent.service's email-based link verification. */
+  findUserByEmail(email: string): Promise<User | null>;
 }
 
 export interface AuthServiceDeps {
@@ -221,6 +223,10 @@ export function createAuthService(deps: AuthServiceDeps): AuthService {
       // survive a password reset.
       await deps.refreshTokenRepository.revokeAllForUser(token.userId);
       await deps.eventBus.publish(AUTH_EVENTS.PasswordChanged, { userId: token.userId });
+    },
+
+    async findUserByEmail(email) {
+      return deps.userRepository.findByEmail(email);
     },
   };
 }

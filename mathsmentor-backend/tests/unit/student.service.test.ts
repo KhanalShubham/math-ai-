@@ -72,6 +72,23 @@ class FakeStudentRepository implements StudentRepository {
       profile.parentIds.push(parentUserId);
     }
   }
+
+  async removeParentLink(studentId: string, parentUserId: string): Promise<void> {
+    const profile = this.profiles.get(studentId);
+    if (profile) profile.parentIds = profile.parentIds.filter((id) => id !== parentUserId);
+  }
+
+  async addClassLink(studentId: string, classId: string): Promise<void> {
+    const profile = this.profiles.get(studentId);
+    if (profile && !profile.classIds.includes(classId)) {
+      profile.classIds.push(classId);
+    }
+  }
+
+  async removeClassLink(studentId: string, classId: string): Promise<void> {
+    const profile = this.profiles.get(studentId);
+    if (profile) profile.classIds = profile.classIds.filter((id) => id !== classId);
+  }
 }
 
 function buildService() {

@@ -35,4 +35,8 @@ export interface StudentRepository {
   updateProfile(studentId: string, patch: UpdateStudentProfileInput): Promise<StudentProfile>;
   updateEstimatedGrade(studentId: string, grade: number): Promise<void>;
   addParentLink(studentId: string, parentUserId: string): Promise<void>;
+  removeParentLink(studentId: string, parentUserId: string): Promise<void>;
+  /** The ONLY write path for classIds — called exclusively from teacher.service's enrollment flow (AD-011), never from a controller. */
+  addClassLink(studentId: string, classId: string): Promise<void>;
+  removeClassLink(studentId: string, classId: string): Promise<void>;
 }

@@ -36,6 +36,13 @@ class FakeUserRepository implements UserRepository {
     return rest;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    const user = [...this.users.values()].find((u) => u.email === email.toLowerCase());
+    if (!user) return null;
+    const { passwordHash: _passwordHash, ...rest } = user;
+    return rest;
+  }
+
   async findByEmailWithCredentials(email: string): Promise<UserWithCredentials | null> {
     return [...this.users.values()].find((u) => u.email === email.toLowerCase()) ?? null;
   }

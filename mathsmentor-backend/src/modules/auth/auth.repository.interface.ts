@@ -21,6 +21,7 @@ export interface CreateUserInput {
  */
 export interface UserRepository {
   findById(id: string): Promise<User | null>;
+  findByEmail(email: string): Promise<User | null>;
   findByEmailWithCredentials(email: string): Promise<UserWithCredentials | null>;
   create(input: CreateUserInput): Promise<User>;
   incrementFailedLogin(id: string): Promise<number>;

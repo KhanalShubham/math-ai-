@@ -12,6 +12,9 @@ import { MongoQuestionRepository } from '../infrastructure/persistence/mongoose/
 import { MongoDiagnosticRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-diagnostic.repository';
 import { MongoPracticeRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-practice.repository';
 import { MongoMasteryRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-mastery.repository';
+import { MongoTeacherProfileRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-teacher-profile.repository';
+import { MongoSchoolRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-school.repository';
+import { MongoClassGroupRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-class-group.repository';
 import { createAuthService, type AuthService } from '../modules/auth/auth.service';
 import { createStudentService, type StudentService } from '../modules/student/student.service';
 import { createMasteryService, type MasteryService } from '../modules/student/mastery.service';
@@ -26,6 +29,7 @@ import {
   type DiagnosticService,
 } from '../modules/diagnostic/diagnostic.service';
 import { createPracticeService, type PracticeService } from '../modules/practice/practice.service';
+import { createTeacherService, type TeacherService } from '../modules/teacher/teacher.service';
 
 /**
  * Manual composition root (ARCHITECTURE.md §13). No DI framework — the object
@@ -48,6 +52,7 @@ export interface Container {
   diagnosticService: DiagnosticService;
   practiceService: PracticeService;
   masteryService: MasteryService;
+  teacherService: TeacherService;
 }
 
 export function createContainer(): Container {
@@ -86,6 +91,17 @@ export function createContainer(): Container {
   const practiceRepository = new MongoPracticeRepository();
   const practiceService = createPracticeService({ practiceRepository, questionRepository, eventBus });
 
+  const teacherProfileRepository = new MongoTeacherProfileRepository();
+  const schoolRepository = new MongoSchoolRepository();
+  const classGroupRepository = new MongoClassGroupRepository();
+  const teacherService = createTeacherService({
+    teacherProfileRepository,
+    schoolRepository,
+    classGroupRepository,
+    studentService,
+    eventBus,
+  });
+
   return {
     logger,
     eventBus,
@@ -97,5 +113,6 @@ export function createContainer(): Container {
     diagnosticService,
     practiceService,
     masteryService,
+    teacherService,
   };
 }

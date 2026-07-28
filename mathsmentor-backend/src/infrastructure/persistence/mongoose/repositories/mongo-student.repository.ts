@@ -93,4 +93,22 @@ export class MongoStudentRepository implements StudentRepository {
       $addToSet: { parentIds: parentUserId },
     }).exec();
   }
+
+  async removeParentLink(studentId: string, parentUserId: string): Promise<void> {
+    await StudentProfileModel.findByIdAndUpdate(studentId, {
+      $pull: { parentIds: parentUserId },
+    }).exec();
+  }
+
+  async addClassLink(studentId: string, classId: string): Promise<void> {
+    await StudentProfileModel.findByIdAndUpdate(studentId, {
+      $addToSet: { classIds: classId },
+    }).exec();
+  }
+
+  async removeClassLink(studentId: string, classId: string): Promise<void> {
+    await StudentProfileModel.findByIdAndUpdate(studentId, {
+      $pull: { classIds: classId },
+    }).exec();
+  }
 }

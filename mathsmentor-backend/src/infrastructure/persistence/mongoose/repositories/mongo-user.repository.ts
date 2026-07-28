@@ -34,6 +34,11 @@ export class MongoUserRepository implements UserRepository {
     return doc ? toUser(doc) : null;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    const doc = await UserModel.findOne({ email: email.toLowerCase() }).exec();
+    return doc ? toUser(doc) : null;
+  }
+
   async findByEmailWithCredentials(email: string): Promise<UserWithCredentials | null> {
     const doc = await UserModel.findOne({ email: email.toLowerCase() })
       .select('+passwordHash')
