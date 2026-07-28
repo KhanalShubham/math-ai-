@@ -30,38 +30,38 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 | | |
 |---|---|
-| **Current Version** | v0.6.0 |
+| **Current Version** | v0.7.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `21028be` |
-| **Backend Modules Complete** | 5 / 10 (+ MasteryRecord read model) |
-| **Overall Progress** | ~55% |
-| **Test Status** | 143/143 passing (17 suites) |
+| **Latest Commit** | `22baf3a` |
+| **Backend Modules Complete** | 6 / 10 (+ MasteryRecord read model) |
+| **Overall Progress** | ~65% |
+| **Test Status** | 164/164 passing (19 suites) |
 | **TypeScript** | clean |
 | **ESLint** | clean |
 
 **Milestone Progress**
 ```
-████████████████░░░░░░░░░░░░░░ 55%
+███████████████████░░░░░░░░░░░ 65%
 ```
 
 **Active Milestone**
-Teacher module
+Parent module
 
 **Current Task**
-Read DOMAIN_MODEL.md §2.4 (`School`/`ClassGroup`) and design `teacher.repository.interface.ts` — note the `teacher` module owns both `TeacherProfile` (§2.3) and `School`/`ClassGroup` (§2.4)
+Read DOMAIN_MODEL.md §2.3 (`ParentProfile`) — design `parent.repository.interface.ts`; the two-aggregate link contract (`ParentProfile` owns link creation, calls `student.service.addParentLink` as the commit step) is already implemented on the Student side and waiting to be called
 
 **Next Task**
-`membershipHistory` handling on `ClassGroup` (append-only — close with `leftAt`, never mutate a past entry) and the two-aggregate parent-link contract from §2.3 (`ParentProfile` owns link creation, calls `student.service.addParentLink`, already implemented and waiting to be called)
+Decide and document the parent-verification mechanism (DOMAIN_MODEL.md deliberately leaves "verification flow" abstract) — plan: parent supplies the child's registered account email as proof of relationship, resolved via the new `authService.findUserByEmail`; a real double-opt-in flow needs Notification infra that's explicitly out of scope for this milestone
 
 **Then**
-Mongoose models/repositories → service → Zod validation → controller → routes → unit tests → integration tests → commit
+Mongoose model/repository → service → Zod validation → controller → routes → unit tests → integration tests → commit
 
 **Project Health**
 - ✅ Build passing
 - ✅ Tests passing
 - ✅ Lint clean
 - ✅ Types clean
-- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic/Practice/Mastery undocumented)
+- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic/Practice/Mastery/Teacher undocumented)
 - ⚠️ Deployment/observability not yet started
 
 **Architecture Status**
@@ -72,38 +72,39 @@ Mongoose models/repositories → service → Zod validation → controller → r
 **Repository Metrics**
 | | |
 |---|---|
-| Commits | 13 |
-| Tests | 143 |
-| Suites | 17 |
+| Commits | 14 |
+| Tests | 164 |
+| Suites | 19 |
 | Coverage | not measured yet |
 | Build | Passing |
 
 **Codebase Size**
 | | |
 |---|---|
-| Source files (`src/`) | 93 |
-| Lines of code (`src/`) | ~4,447 |
-| Domain modules (`src/modules/`) | 10 (5 implemented, 5 scaffolded) |
-| API endpoints | 36 |
-| Test files | 18 |
+| Source files (`src/`) | 106 |
+| Lines of code (`src/`) | ~5,371 |
+| Domain modules (`src/modules/`) | 10 (6 implemented, 4 scaffolded) |
+| API endpoints | 46 |
+| Test files | 20 |
 
 **Module Completion**
 
 | Module | Status | Started | Completed |
 |---|---|---|---|
-| Auth | ✅ Complete (frozen) | 2026-07-28 or earlier | 2026-07-28 |
+| Auth | ✅ Complete (frozen)² | 2026-07-28 or earlier | 2026-07-28 |
 | Student | ✅ Complete (frozen)¹ | 2026-07-28 | 2026-07-28 |
 | Curriculum | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
 | Diagnostic | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
 | Practice | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
 | MasteryRecord (student addition) | ✅ Complete | 2026-07-28 | 2026-07-28 |
-| Teacher | 🚧 In Progress | 2026-07-28 | — |
-| Parent | ⏳ Planned | — | — |
+| Teacher | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
+| Parent | 🚧 In Progress | 2026-07-28 | — |
 | Notification | ⏳ Planned | — | — |
 | Analytics | ⏳ Planned | — | — |
 | AI | ⏳ Planned | — | — |
 
-¹ `StudyPlan` (DOMAIN_MODEL.md §2.10) is still owned by `student` but not yet built — "frozen" describes `StudentProfile` + `MasteryRecord`; the module reopens narrowly for that one addition, not a full unfreeze.
+¹ `StudyPlan` (DOMAIN_MODEL.md §2.10) is still owned by `student` but not yet built — "frozen" describes `StudentProfile` + `MasteryRecord` + the narrow `addClassLink`/`removeClassLink`/`removeParentLink`/`getById` additions the Teacher module required (AD-011); the module reopens narrowly for these, not a full unfreeze.
+² `findUserByEmail`/`findByEmail` were added narrowly to support Teacher/Parent cross-module lookups (no passwordHash exposed) — same narrow-reopening pattern as Student's additions, not a full unfreeze.
 
 **Production Readiness**
 - ☐ OpenAPI complete
@@ -138,8 +139,8 @@ No load-testing tooling is wired up yet — these are targets to design against,
 ✅ Diagnostic
 ✅ Practice
 ✅ MasteryRecord
-🚧 Teacher
-⬜ Parent
+✅ Teacher
+🚧 Parent
 ⬜ Analytics
 ⬜ Notification
 ⬜ AI
@@ -178,20 +179,23 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - Curriculum module
 - Diagnostic module
 - Practice module
+- Teacher module (see AD-011 for the ClassGroup↔StudentProfile write path)
 
 **Known Risks**
 - `MasteryRecord` is the first read model with a hard "only these event handlers may write it" rule (DOMAIN_MODEL.md §2.9) — nothing DB-enforces this, so it depends entirely on code-review discipline holding, same as the prerequisite-DAG cycle check.
-- The Teacher module's `ClassGroup.activeStudentIds` and `StudentProfile.classIds` need to stay in sync — DOMAIN_MODEL.md doesn't fully specify this two-aggregate write path the way it does for the parent-link case (§2.3), so this needs a deliberate design decision, not an assumption, before coding it.
 - The AI module (`hint`, `tutor`, `recommendation`, `study-plan`) can now read real `MasteryRecord` data, but still has no consumer built — it remains blocked on product scope, not data availability.
 - `EventBus` is in-process/in-memory only — a process restart drops any in-flight event; fine for day-one, but the event log is not yet durable (ARCHITECTURE.md §21.1 flags this as a deliberate, revisitable choice, not an oversight). This matters more now that `MasteryRecord` depends on events actually being delivered.
 - AI must never receive `answerKey` or ungraded student answers directly — enforced today by `toPublicQuestion`/`select:false`; every new module touching `Question`/grading must preserve this boundary.
 - Diagnostic's next-question selection is a simplified heuristic (2 items/topic, difficulty ±1 on correct/incorrect), not a real IRT/adaptive-testing model — fine for a first working version, but the grade/theta mapping in `diagnostic.service.ts` (`mapThetaToGrade`) is a linear placeholder that will need real psychometric backing before this ships to real students.
+- AD-011's two-write enrollment (ClassGroup then StudentProfile) is not a distributed transaction — if the second write fails after the first succeeds, `StudentProfile.classIds` and `ClassGroup.activeStudentIds` can drift until a reconciliation job (ARCHITECTURE.md §21.3) exists. No such job is built yet — same open gap as the parent-link case it mirrors.
+- Parent verification (next milestone) will use knowledge of the child's registered email as a placeholder proof of guardianship, not a real double-opt-in flow — flagged in advance so it isn't mistaken for a finished trust/safety feature.
 
 **Tech Debt**
-- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, Practice, and Mastery endpoints aren't documented there yet.
+- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, Practice, Mastery, and Teacher endpoints aren't documented there yet.
 - `domain/grading`'s algebraic grader is a normalized string match against `acceptedForms`, not true symbolic equivalence (e.g. "2x+4" vs "4+2x" would fail) — needs a CAS-backed check eventually.
 - `domain/grading`'s multi-step grader is a JSON deep-equality check per step — fine for primitive step answers, not a general structural-equivalence engine.
 - `mastery.service`'s diagnostic-completion bootstrap approximates a fractional `topicBreakdown` score as pass/fail against a 0.5 threshold (`upsertFromAttempt` only accepts a boolean) — loses the fractional granularity DOMAIN_MODEL.md's diagnostic breakdown actually carries.
+- No background reconciliation job exists yet for either two-aggregate write contract (parent-link or AD-011's class-enrollment) — both are documented as eventually-consistent-on-failure, not actually monitored/repaired.
 
 ---
 
@@ -239,6 +243,18 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 `VerificationToken` (email verification + password reset, one active token per user/type) and `RefreshToken` (rotation, theft detection) each got their own collection instead of accumulating token fields on `User` — the same pattern extends cleanly to future flows (magic links, invitations) without touching `User`'s schema again.
 **Status:** Frozen · **Introduced:** v0.1.0 · **Last reviewed:** v0.1.0
 
+### AD-011 — `ClassGroup` owns student enrollment; `StudentProfile.classIds` is written via a synchronous service call, not an event
+**Decision:** `ClassGroup` (owned by `teacher`) is the aggregate that owns the enrollment/withdrawal action. `teacher.service.enrollStudent`/`withdrawStudent` write `ClassGroup.activeStudentIds` + `membershipHistory` first (via `classGroupRepository`), then call the new `student.service.addClassLink`/`removeClassLink` as the "commit" step for `StudentProfile.classIds`. Not a distributed transaction — if the second call fails, that's background-reconciliation-job territory (ARCHITECTURE.md §21.3), exactly as already accepted for the parent-link case.
+
+**Why:** DOMAIN_MODEL.md §2.3 already resolves the structurally identical problem for parent-student links (`ParentProfile` owns link creation, calls `student.service.addParentLink`) but left the class-enrollment case unresolved (§2.4 just says `activeStudentIds` is "current roster" without specifying the write path). Mirroring the already-reviewed parent-link pattern keeps exactly one consistency strategy in the codebase for "two-aggregate link" problems, instead of two different ones that would each need separate reasoning about failure modes.
+
+**Alternatives considered:**
+1. *Direct write from `teacher` into the `StudentProfile` collection.* Rejected — violates AD-002 (one module owns one collection); would give `teacher` a second write path into `student`'s data.
+2. *Event-driven, eventually-consistent update* (`teacher.service` publishes an event; a `student` module handler updates `classIds` asynchronously, mastery-style). Rejected — introduces a consistency lag for a value (`classIds`) that's read synchronously elsewhere in the same request cycle far more often than `MasteryRecord` is, and would leave two different two-aggregate-link strategies (sync for parent-links, async for class-links) in one codebase for no principled reason.
+3. *Distributed transaction / two-phase commit.* Rejected — no supporting infrastructure exists (MongoDB multi-document transactions were deliberately avoided per the architecture doc's simplicity constraints), and the parent-link precedent already established that "retry/reconcile on partial failure" is an acceptable, simpler alternative for this codebase's stakes.
+
+**Status:** Frozen · **Introduced:** v0.7.0 · **Last reviewed:** v0.7.0
+
 ---
 
 ## Releases
@@ -251,7 +267,30 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 | v0.4.0 | Diagnostic module + `domain/grading` | `1f73876` |
 | v0.5.0 | Practice module | `78cc9c0` |
 | v0.6.0 | MasteryRecord read model | `21028be` |
-| v0.7.0 | Teacher module (planned) | — |
+| v0.7.0 | Teacher module (`TeacherProfile`/`School`/`ClassGroup`, AD-011) | `22baf3a` |
+| v0.8.0 | Parent module (planned) | — |
+
+---
+
+## 2026-07-28 — Teacher module complete
+
+**Status:** TypeScript ✅ · ESLint ✅ · Tests ✅ (164/164, 19 suites) · commit `22baf3a`
+
+**Completed**
+- `TeacherProfile`, `School`, `ClassGroup` (DOMAIN_MODEL.md §2.3–2.4) — full repository interface → Mongoose models/repositories → service → Zod validation → controller → routes → unit tests → integration tests.
+- Append-only `membershipHistory`: `enrollStudent` always pushes a new open entry (`leftAt: null`); `withdrawStudent` closes the one open entry for that student with `leftAt` and never touches earlier closed entries. A student who leaves and rejoins the same class ends up with two history entries, not one mutated one — verified by a dedicated unit test (`supports multiple historical memberships without mutating a closed entry`).
+- Enrollment/withdrawal authorization: a teacher may only act on classes they're assigned to (`assertCanManageClass` in `teacher.controller.ts`); admins bypass this — mirrors the existing self-or-admin pattern already used in `student.controller.listByParent`.
+
+**Architecture decisions**
+- **AD-011** (new) — resolves the previously-open question of how `ClassGroup.activeStudentIds` stays in sync with `StudentProfile.classIds`. See the Architecture Decisions Log above for the full write-up (decision, why, alternatives considered and rejected).
+- Narrow, documented reopenings required by AD-011: `student` gained `getById`, `addClassLink`/`removeClassLink`, `removeParentLink` (symmetric with the existing `addParentLink`); `auth` gained `findByEmail`/`findUserByEmail` (read-only, no `passwordHash`) — added now because the upcoming Parent module needs it too, not solely for Teacher.
+
+**Known technical debt**
+- AD-011's two-write enrollment has no reconciliation job yet if the second write (`student.service.addClassLink`) fails after the first succeeds — same accepted gap as the pre-existing parent-link case.
+- `docs/openapi/auth.yaml` still doesn't cover Teacher's new routes.
+
+**Next milestone**
+Parent module (DOMAIN_MODEL.md §2.3) — `ParentProfile` owns link creation and calls the already-implemented `student.service.addParentLink`/`removeParentLink`. The open design question here is the verification mechanism itself (the domain doc deliberately leaves "verification flow" abstract); plan is a placeholder email-based check via the new `authService.findUserByEmail`, documented as a placeholder pending real Notification-backed double opt-in.
 
 ---
 
