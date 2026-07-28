@@ -55,20 +55,38 @@ Mongoose model/repository → Zod validation → controller → routes → unit 
 | Coverage | not measured yet |
 | Build | Passing |
 
+**Codebase Size**
+| | |
+|---|---|
+| Source files (`src/`) | 79 |
+| Lines of code (`src/`) | ~3,740 |
+| Domain modules (`src/modules/`) | 10 (4 implemented, 6 scaffolded) |
+| API endpoints | 30 |
+| Test files | 14 |
+
 **Module Completion**
 
-| Module | Status |
-|---|---|
-| Auth | ✅ Complete (frozen) |
-| Student | ✅ Complete (frozen) |
-| Curriculum | ✅ Complete (frozen) |
-| Diagnostic | ✅ Complete (frozen) |
-| Practice | 🚧 In Progress |
-| Teacher | ⏳ Planned |
-| Parent | ⏳ Planned |
-| Notification | ⏳ Planned |
-| Analytics | ⏳ Planned |
-| AI | ⏳ Planned |
+| Module | Status | Started | Completed |
+|---|---|---|---|
+| Auth | ✅ Complete (frozen) | 2026-07-28 or earlier | 2026-07-28 |
+| Student | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
+| Curriculum | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
+| Diagnostic | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
+| Practice | 🚧 In Progress | 2026-07-28 | — |
+| Teacher | ⏳ Planned | — | — |
+| Parent | ⏳ Planned | — | — |
+| Notification | ⏳ Planned | — | — |
+| Analytics | ⏳ Planned | — | — |
+| AI | ⏳ Planned | — | — |
+
+**Production Readiness**
+- ☐ OpenAPI complete
+- ☐ Docker production image
+- ☐ CI/CD
+- ☐ Monitoring
+- ☐ Logging (structured logging already in place via pino; alerting not yet)
+- ☐ Backups
+- ☐ Security review
 
 **Backend Roadmap**
 ```
