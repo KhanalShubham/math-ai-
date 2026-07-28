@@ -10,6 +10,7 @@ import { MongoStudentRepository } from '../infrastructure/persistence/mongoose/r
 import { MongoTopicRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-topic.repository';
 import { MongoQuestionRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-question.repository';
 import { MongoDiagnosticRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-diagnostic.repository';
+import { MongoPracticeRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-practice.repository';
 import { createAuthService, type AuthService } from '../modules/auth/auth.service';
 import { createStudentService, type StudentService } from '../modules/student/student.service';
 import {
@@ -22,6 +23,7 @@ import {
   createDiagnosticService,
   type DiagnosticService,
 } from '../modules/diagnostic/diagnostic.service';
+import { createPracticeService, type PracticeService } from '../modules/practice/practice.service';
 
 /**
  * Manual composition root (ARCHITECTURE.md §13). No DI framework — the object
@@ -42,6 +44,7 @@ export interface Container {
   topicService: TopicService;
   questionService: QuestionService;
   diagnosticService: DiagnosticService;
+  practiceService: PracticeService;
 }
 
 export function createContainer(): Container {
@@ -74,6 +77,9 @@ export function createContainer(): Container {
     eventBus,
   });
 
+  const practiceRepository = new MongoPracticeRepository();
+  const practiceService = createPracticeService({ practiceRepository, questionRepository, eventBus });
+
   return {
     logger,
     eventBus,
@@ -83,5 +89,6 @@ export function createContainer(): Container {
     topicService,
     questionService,
     diagnosticService,
+    practiceService,
   };
 }
