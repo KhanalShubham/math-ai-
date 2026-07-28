@@ -6,6 +6,7 @@ import { createCurriculumRouter } from '../../modules/curriculum/curriculum.rout
 import { createDiagnosticRouter } from '../../modules/diagnostic/diagnostic.routes';
 import { createPracticeRouter } from '../../modules/practice/practice.routes';
 import { createTeacherRouter } from '../../modules/teacher/teacher.routes';
+import { createParentRouter } from '../../modules/parent/parent.routes';
 
 /** Composes all module routers under /api/v1. */
 export function createV1Router(container: Container): Router {
@@ -29,6 +30,7 @@ export function createV1Router(container: Container): Router {
     createPracticeRouter(container.practiceService, container.studentService),
   );
   router.use('/teacher', createTeacherRouter(container.teacherService));
+  router.use('/parent', createParentRouter(container.parentService));
 
   return router;
 }
