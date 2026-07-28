@@ -8,6 +8,7 @@ import { createPracticeRouter } from '../../modules/practice/practice.routes';
 import { createTeacherRouter } from '../../modules/teacher/teacher.routes';
 import { createParentRouter } from '../../modules/parent/parent.routes';
 import { createAnalyticsRouter } from '../../modules/analytics/analytics.routes';
+import { createNotificationRouter } from '../../modules/notification/notification.routes';
 
 /** Composes all module routers under /api/v1. */
 export function createV1Router(container: Container): Router {
@@ -33,6 +34,7 @@ export function createV1Router(container: Container): Router {
   router.use('/teacher', createTeacherRouter(container.teacherService));
   router.use('/parent', createParentRouter(container.parentService));
   router.use('/analytics', createAnalyticsRouter(container.analyticsService));
+  router.use('/notifications', createNotificationRouter(container.notificationService));
 
   return router;
 }

@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { InProcessEventBus } from '../../src/infrastructure/events/in-process.event-bus';
 import { createMasteryService } from '../../src/modules/student/mastery.service';
+import { MASTERY_EVENTS } from '../../src/modules/student/mastery.events';
 import { PRACTICE_EVENTS } from '../../src/modules/practice/practice.events';
 import { DIAGNOSTIC_EVENTS } from '../../src/modules/diagnostic/diagnostic.events';
 import type { MasteryRepository } from '../../src/modules/student/mastery.repository.interface';
@@ -168,5 +169,72 @@ describe('mastery.service', () => {
   it('returns an empty list for a student with no recorded attempts', async () => {
     const { service } = buildService();
     await expect(service.getByStudent(fakeId())).resolves.toEqual([]);
+  });
+
+  it('publishes MasteryMilestoneReached the first time a topic crosses the mastery threshold', async () => {
+    const { eventBus } = buildService();
+    const studentId = fakeId();
+    const topicId = fakeId();
+    const milestones: Array<{ studentId: string; topicId: string; masteryScore: number }> = [];
+    eventBus.subscribe(MASTERY_EVENTS.MasteryMilestoneReached, async (event) => {
+      milestones.push(event.payload as { studentId: string; topicId: string; masteryScore: number });
+    });
+
+    // The very first correct answer bootstraps masteryScore straight to 1
+    // (no existing record to weight against), crossing the threshold
+    // immediately; the next three correct answers keep it at 1, well past
+    // the threshold, and must not re-fire the milestone.
+    for (let i = 0; i < 4; i += 1) {
+      await eventBus.publish(PRACTICE_EVENTS.PracticeItemSubmitted, {
+        studentId,
+        topicId,
+        questionId: fakeId(),
+        isCorrect: true,
+      });
+    }
+
+    expect(milestones).toHaveLength(1);
+    expect(milestones[0]).toMatchObject({ studentId, topicId });
+    expect(milestones[0]!.masteryScore).toBeGreaterThanOrEqual(0.8);
+  });
+
+  it('does not publish MasteryMilestoneReached again once already mastered', async () => {
+    const { eventBus } = buildService();
+    const studentId = fakeId();
+    const topicId = fakeId();
+    let milestoneCount = 0;
+    eventBus.subscribe(MASTERY_EVENTS.MasteryMilestoneReached, async () => {
+      milestoneCount += 1;
+    });
+
+    for (let i = 0; i < 6; i += 1) {
+      await eventBus.publish(PRACTICE_EVENTS.PracticeItemSubmitted, {
+        studentId,
+        topicId,
+        questionId: fakeId(),
+        isCorrect: true,
+      });
+    }
+
+    expect(milestoneCount).toBe(1);
+  });
+
+  it('never publishes MasteryMilestoneReached while the topic stays below threshold', async () => {
+    const { eventBus } = buildService();
+    const studentId = fakeId();
+    const topicId = fakeId();
+    let milestoneCount = 0;
+    eventBus.subscribe(MASTERY_EVENTS.MasteryMilestoneReached, async () => {
+      milestoneCount += 1;
+    });
+
+    await eventBus.publish(PRACTICE_EVENTS.PracticeItemSubmitted, {
+      studentId,
+      topicId,
+      questionId: fakeId(),
+      isCorrect: false,
+    });
+
+    expect(milestoneCount).toBe(0);
   });
 });

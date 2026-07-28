@@ -50,25 +50,25 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 | | |
 |---|---|
-| **Current Version** | v0.9.1 |
+| **Current Version** | v0.10.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `0448e25` |
-| **Backend Modules Complete** | 8 / 10 (+ MasteryRecord read model) |
-| **Overall Progress** | ~85% |
-| **Test Status** | 202/202 passing (23 suites) |
+| **Latest Commit** | `<pending>` |
+| **Backend Modules Complete** | 9 / 10 (+ MasteryRecord read model) |
+| **Overall Progress** | ~90% |
+| **Test Status** | 215/215 passing (25 suites) |
 | **TypeScript** | clean |
 | **ESLint** | clean |
 
 **Milestone Progress**
 ```
-█████████████████████████░░░░ 85%
+███████████████████████████░░ 90%
 ```
 
 **Active Milestone**
-None — Analytics complete; awaiting direction for Notification or AI (see stop condition below)
+None — Notification complete; awaiting direction for AI (see stop condition below)
 
 **Current Focus**
-Parent → Analytics (both complete; next module not yet chosen)
+Analytics → Notification (both complete; AI is the only planned backend module left)
 
 **Blocked By**
 None
@@ -77,7 +77,7 @@ None
 Reconciliation strategy for `ClassGroup.activeStudentIds` ↔ `StudentProfile.classIds` drift on partial AD-011 write failure (mirrors the same open gap on the parent-link contract)
 
 **Current Task**
-None in progress. Per explicit instruction, do not begin Notification, AI, Deployment, CI/CD, or OpenAPI work until requested.
+None in progress. Per explicit instruction, do not begin AI, Deployment, CI/CD, or OpenAPI work until requested.
 
 **Next Task**
 —
@@ -90,7 +90,7 @@ None in progress. Per explicit instruction, do not begin Notification, AI, Deplo
 - ✅ Tests passing
 - ✅ Lint clean
 - ✅ Types clean
-- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic/Practice/Mastery/Teacher/Parent/Analytics undocumented)
+- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic/Practice/Mastery/Teacher/Parent/Analytics/Notification undocumented)
 - ⚠️ Deployment/observability not yet started
 
 **Architecture Status**
@@ -101,20 +101,20 @@ None in progress. Per explicit instruction, do not begin Notification, AI, Deplo
 **Repository Metrics**
 | | |
 |---|---|
-| Commits | 20 |
-| Tests | 202 |
-| Suites | 23 |
+| Commits | 22 |
+| Tests | 215 |
+| Suites | 25 |
 | Coverage | not measured yet |
 | Build | Passing |
 
 **Codebase Size**
 | | |
 |---|---|
-| Source files (`src/`) | 123 |
-| Lines of code (`src/`) | ~6,272 |
-| Domain modules (`src/modules/`) | 10 (8 implemented, 2 scaffolded) |
-| API endpoints | 55 |
-| Test files | 24 |
+| Source files (`src/`) | 132 |
+| Lines of code (`src/`) | ~6,646 |
+| Domain modules (`src/modules/`) | 10 (9 implemented, 1 scaffolded) |
+| API endpoints | 58 |
+| Test files | 26 |
 
 **Module Completion**
 
@@ -129,12 +129,13 @@ None in progress. Per explicit instruction, do not begin Notification, AI, Deplo
 | Teacher | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
 | Parent | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
 | Analytics | ✅ Complete (frozen)³ | 2026-07-28 | 2026-07-28 |
-| Notification | ⏳ Planned | — | — |
+| Notification | ✅ Complete (frozen)⁴ | 2026-07-28 | 2026-07-28 |
 | AI | ⏳ Planned | — | — |
 
 ¹ `StudyPlan` (DOMAIN_MODEL.md §2.10) is still owned by `student` but not yet built — "frozen" describes `StudentProfile` + `MasteryRecord` + the narrow `addClassLink`/`removeClassLink`/`removeParentLink`/`getById` additions the Teacher/Parent modules required (AD-011 and the parent-link contract); the module reopens narrowly for these, not a full unfreeze.
 ² `findUserByEmail`/`findByEmail` were added narrowly to support Teacher/Parent cross-module lookups (no passwordHash exposed) — same narrow-reopening pattern as Student's additions, not a full unfreeze.
 ³ Analytics subscribes to every event type published by every other module (see AD-012) — it reopens no other module's code (only imports each module's `*.events.ts` constants/types, the same read-only pattern MasteryRecord already established), so "frozen" here describes analytics' own write path, not a reopening of any other module.
+⁴ Notification required a genuine, narrow reopening of `student`'s frozen `mastery.service` — its first-ever published event, `MasteryMilestoneReached` (AD-014) — not just a read-only events-file import like Analytics' pattern. Only `mastery_milestone` is wired end-to-end today; `streak_reminder`/`weekly_report`/`assignment_due` are deferred (see Known Risks/Tech Debt) since each needs infrastructure or product data (a streak concept, a scheduled job runner, assignment due dates) this codebase doesn't have yet.
 
 **Production Readiness**
 - ☐ OpenAPI complete
@@ -172,7 +173,7 @@ No load-testing tooling is wired up yet — these are targets to design against,
 ✅ Teacher
 ✅ Parent
 ✅ Analytics
-⬜ Notification
+✅ Notification
 ⬜ AI
 ⬜ Deployment
 ```
@@ -199,19 +200,22 @@ Parent
     ↓
 Analytics
     ↓
+Notification (needs mastery.service to
+    ↓          publish MasteryMilestoneReached — AD-014)
 AI
 ```
-Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnostic/Practice must precede Mastery (it projects their events). Mastery should precede AI (`recommendation`/`study-plan` need real mastery data to reason over, not just events to subscribe to). Teacher and Parent both depend on Student for their two-aggregate link contracts (AD-011 and the parent-link case respectively). Analytics doesn't strictly depend on Teacher/Parent finishing first (it only imports each module's `*.events.ts` constants/types) — it was simply built last because it subscribes to every event type every other module publishes (AD-012), so building it after all seven producer modules existed meant one pass instead of revisiting it per new module.
+Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnostic/Practice must precede Mastery (it projects their events). Mastery should precede AI (`recommendation`/`study-plan` need real mastery data to reason over, not just events to subscribe to). Teacher and Parent both depend on Student for their two-aggregate link contracts (AD-011 and the parent-link case respectively). Analytics doesn't strictly depend on Teacher/Parent finishing first (it only imports each module's `*.events.ts` constants/types) — it was simply built last because it subscribes to every event type every other module publishes (AD-012), so building it after all seven producer modules existed meant one pass instead of revisiting it per new module. Notification depends on `student`'s mastery.service publishing its first-ever event (AD-014) — a genuine reopening, not just a read-only events-file import like Analytics'.
 
 **Decisions Frozen** (do not reopen absent a bug or genuine architectural issue):
 - Authentication
-- Student module (`StudentProfile` + `MasteryRecord` — see footnote above)
+- Student module (`StudentProfile` + `MasteryRecord` — see footnote above; mastery.service's narrow AD-014 reopening is documented there, not here)
 - Curriculum module
 - Diagnostic module
 - Practice module
 - Teacher module (see AD-011 for the ClassGroup↔StudentProfile write path)
 - Parent module (link verification is a documented placeholder — see Known Risks — not a design gap in the frozen contract itself)
 - Analytics module (see AD-012 for the explicit-per-event-type subscription approach)
+- Notification module (see AD-014; only `mastery_milestone` is wired end-to-end — the other three DOMAIN_MODEL.md §2.12 types are deferred, see Known Risks/Tech Debt)
 
 **Known Risks**
 - `MasteryRecord` is the first read model with a hard "only these event handlers may write it" rule (DOMAIN_MODEL.md §2.9) — nothing DB-enforces this, so it depends entirely on code-review discipline holding, same as the prerequisite-DAG cycle check.
@@ -223,9 +227,12 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - Parent verification uses knowledge of the child's registered email as a placeholder proof of guardianship, not a real double-opt-in flow — anyone who knows (or guesses/phishes) a student's account email can currently link themselves as that student's parent. Acceptable for a pre-launch build, but must be replaced with real verification (Notification-backed double opt-in, or school-mediated confirmation) before real users are onboarded.
 - Analytics has no wildcard event subscription (AD-012) — a new event type published by any module is silently absent from the analytics/audit log until `analytics.service.ts` is updated to add an explicit handler for it. Nothing fails loudly; this depends on code-review discipline the same way MasteryRecord's single-writer rule does.
 - `AnalyticsEvent`'s 18-month TTL (AD-013) is a hard delete, not archive-then-delete — once a document expires it is gone, with no aggregated/rolled-up record surviving it. Acceptable today since no reporting feature depends on data older than 18 months, but revisit before any dashboard promises multi-year trend data.
+- `MasteryMilestoneReached` (AD-014) fires every time a topic's score crosses the 0.8 threshold upward, not just the first time ever — a score that dips below and later re-crosses fires again. Documented simplification (a true once-ever achievement needs persisted state this module doesn't track today), not a bug.
+- Notification only wires up `mastery_milestone` of the four `NotificationType`s DOMAIN_MODEL.md §2.12 defines. `streak_reminder` has no streak concept anywhere in the codebase; `weekly_report` needs a scheduled/cron job runner (`JobQueue` only supports enqueue-and-run-once, no recurring schedule); `assignment_due` needs a due date on `PracticeSession`, which doesn't exist (`teacher_assigned` practice creation is itself still unbuilt — see Practice's existing tech debt). All three are real gaps, not silent oversights.
+- Notification doesn't yet notify a student's linked parents when the student hits a mastery milestone — a natural extension once real product demand exists, deliberately not built now to avoid scope creep (would need per-parent `notificationPreferences` handling).
 
 **Tech Debt**
-- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, Practice, Mastery, Teacher, Parent, and Analytics endpoints aren't documented there yet.
+- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, Practice, Mastery, Teacher, Parent, Analytics, and Notification endpoints aren't documented there yet.
 - `domain/grading`'s algebraic grader is a normalized string match against `acceptedForms`, not true symbolic equivalence (e.g. "2x+4" vs "4+2x" would fail) — needs a CAS-backed check eventually.
 - `domain/grading`'s multi-step grader is a JSON deep-equality check per step — fine for primitive step answers, not a general structural-equivalence engine.
 - `mastery.service`'s diagnostic-completion bootstrap approximates a fractional `topicBreakdown` score as pass/fail against a 0.5 threshold (`upsertFromAttempt` only accepts a boolean) — loses the fractional granularity DOMAIN_MODEL.md's diagnostic breakdown actually carries.
@@ -234,6 +241,8 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - No background reconciliation job exists yet for either two-aggregate write contract (parent-link or AD-011's class-enrollment) — both are documented as eventually-consistent-on-failure, not actually monitored/repaired.
 - Analytics' two read endpoints (`GET /analytics/students/:studentId/events`, `GET /analytics/events/count`) are minimal reporting primitives (indexed reads, no aggregation pipeline) — real teacher/admin dashboards will need proper aggregation queries once a concrete reporting requirement exists (ARCHITECTURE.md §13 guidance: build the aggregation pipeline only once a real latency problem appears, not preemptively).
 - `DiagnosticCompleted` and `PracticeItemSubmitted` don't carry their own attempt/session id in their event payload, so analytics' projected `AnalyticsEvent.aggregateId` for those two event types points at the student/question instead of the actual attempt/session document — documented in `analytics.service.ts`, not a data-loss bug (the source records are still fully queryable through `diagnostic`/`practice` directly).
+- Notification's `streak_reminder`, `weekly_report`, and `assignment_due` types are unwired (see Known Risks) — each is blocked on infrastructure or product data that doesn't exist yet, tracked here rather than silently dropped.
+- No email delivery exists for Notification — `deliveredVia` is always `['in_app']` today; DOMAIN_MODEL.md's `'email'` channel option is modeled but unimplemented, same "Phase 9 log-line" placeholder status as auth's verification/password-reset emails (`auth.service.ts`).
 
 ---
 
@@ -321,6 +330,21 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 
 **Status:** Frozen · **Introduced:** v0.9.1 · **Last reviewed:** v0.9.1
 
+### AD-014 — `mastery.service` publishes its first event, `MasteryMilestoneReached`, to give Notification something real to react to
+
+**Decision:** `mastery.service`'s `applyAttempt` helper (used by both its existing event handlers) now reads the previous `MasteryRecord` via `findByStudentAndTopic` before calling the already-sanctioned `upsertFromAttempt`, and publishes `MASTERY_EVENTS.MasteryMilestoneReached` when a topic's `masteryScore` crosses 0.8 upward. No repository interface change — both methods it calls already existed. `notification.service` subscribes to this event and creates a `mastery_milestone` Notification for the student.
+
+**Why:** the functionality-over-CRUD bar the user set (see PROGRESS.md's development philosophy, not itself an AD) means Notification needed at least one of DOMAIN_MODEL.md §2.12's four notification types wired genuinely end-to-end, not just a repository/inbox shell. Of the four (`streak_reminder`, `weekly_report`, `assignment_due`, `mastery_milestone`), only `mastery_milestone` had a real, already-existing signal to react to — `MasteryRecord` already exists and already updates on every practice/diagnostic attempt. The other three each need infrastructure or data this codebase doesn't have (a streak concept, a scheduled/cron job runner beyond `JobQueue`'s enqueue-once interface, and a due date on `PracticeSession`), so building any of them now would mean inventing that infrastructure speculatively — exactly what the architecture doc counsels against. Every other module already publishes an event after its state-changing write (AD-011, AD-012's producers, etc.) — `mastery.service` was the one exception, purely because nothing had needed to react to a mastery *change* before Notification did.
+
+**Alternatives considered:**
+1. *Have `notification.service` re-derive "did this cross a milestone" itself*, subscribing to the same raw `PracticeItemSubmitted`/`DiagnosticCompleted` events mastery already listens to. Rejected — would duplicate mastery's own scoring/threshold logic outside the module that owns it (violates AD-002's one-module-owns-its-domain-logic spirit), and still needs a "score right before this event" read that only `mastery.service` can cheaply provide (it already reads-then-writes internally).
+2. *Poll `MasteryRecord` from a scheduled job instead of an event.* Rejected — no scheduled/cron job runner exists yet (see Known Risks on `weekly_report`), and an event is simpler and immediate for something that already has a natural trigger point (the moment mastery updates).
+3. *Fire on every mastery update, not just threshold-crossings.* Rejected as needlessly noisy — a "mastery milestone" notification should mean something (crossing into "mastered"), not fire on every practice attempt.
+
+**Known limitation:** the crossing check only compares the immediately preceding score, so a score that dips below 0.8 and later re-crosses it fires again — not a true once-ever achievement (tracked in Known Risks/Tech Debt).
+
+**Status:** Frozen · **Introduced:** v0.10.0 · **Last reviewed:** v0.10.0
+
 ---
 
 ## Releases
@@ -337,6 +361,33 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 | v0.8.0 | Parent module (`ParentProfile`, link/unlink by email) | `6e91541` |
 | v0.9.0 | Analytics module (`AnalyticsEvent`, AD-012) | `f969f11` |
 | v0.9.1 | `AnalyticsEvent` retention policy — 18-month TTL delete (AD-013) | `0448e25` |
+| v0.10.0 | Notification module (`Notification`, `mastery_milestone` end-to-end, AD-014) | `<pending>` |
+
+---
+
+## 2026-07-28 — Notification module complete
+
+**Status:** TypeScript ✅ · ESLint ✅ · Tests ✅ (215/215, 25 suites) · commit `<pending>`
+
+**Completed**
+- `Notification` (DOMAIN_MODEL.md §2.12) — full repository interface → Mongoose model/repository → service → Zod validation → controller → routes → unit tests → integration tests. Unread-first inbox index (`{ userId:1, readAt:1, createdAt:-1 }`) exactly as specified.
+- Real, end-to-end functionality per the user's functionality-over-CRUD directive: a student who submits a correct practice answer (or completes a diagnostic) that crosses a topic's mastery threshold for the first time gets a real, visible, mark-readable in-app notification — verified against real Mongo in `notification.test.ts`, not just unit-mocked.
+- **AD-014** (new) — `mastery.service` publishes its first-ever event, `MASTERY_EVENTS.MasteryMilestoneReached`, when a topic's `masteryScore` crosses 0.8 upward; `notification.service` subscribes and creates the `mastery_milestone` Notification, resolving the recipient's auth `userId` via `studentService.getById` (mastery only knows the StudentProfile id).
+- Self-scoped inbox API: `GET /notifications` (unread-first, filterable by `unreadOnly`/`limit`), `PATCH /notifications/:id/read`, `PATCH /notifications/read-all` — any authenticated role, ownership-checked (a user can only mark their own notifications read; verified with a 403 test).
+- Removed the stale `src/modules/notification/README.md` scaffold placeholder.
+
+**Architecture decisions**
+- AD-014 (see Architecture Decisions Log) — the first mastery.service change since its original build; a narrow, justified reopening of a frozen module, same category as AD-011's reopening of `student`.
+
+**Known technical debt**
+- Only `mastery_milestone` of DOMAIN_MODEL.md §2.12's four `NotificationType`s is wired end-to-end. `streak_reminder`, `weekly_report`, and `assignment_due` are deferred — each needs infrastructure or data this codebase doesn't have yet (a streak concept, a scheduled/cron job runner, a `PracticeSession` due date). Documented as real gaps, not silently dropped.
+- No email delivery — `deliveredVia` is always `['in_app']`; DOMAIN_MODEL.md's `'email'` channel is modeled but unimplemented, same placeholder status as auth's verification/reset emails.
+- `MasteryMilestoneReached` fires on every upward threshold-crossing, not just the first ever (a score that dips and re-crosses re-fires) — documented simplification.
+- Notification doesn't (yet) also notify a student's linked parents on a milestone — a natural extension once real product demand exists.
+- `docs/openapi/auth.yaml` still doesn't cover Notification's routes.
+
+**Next milestone**
+None queued per explicit scope instruction — AI is the only backend module still planned; Deployment/CI/CD/OpenAPI remain out of scope until requested.
 
 ---
 
