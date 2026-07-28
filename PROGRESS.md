@@ -52,7 +52,7 @@ state is visible without re-scanning the codebase. Newest entry on top.
 |---|---|
 | **Current Version** | v0.11.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `<pending>` |
+| **Latest Commit** | `b5c1c0f` |
 | **Backend Modules Complete** | 9 / 10 (+ MasteryRecord read model) |
 | **Frontend** | Test harness built (`mathsmentor-frontend/`) — not the product UI, see AD-015 |
 | **Overall Progress** | ~90% backend · Phase 1 product loop proven end-to-end |
@@ -406,13 +406,13 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 | v0.9.0 | Analytics module (`AnalyticsEvent`, AD-012) | `f969f11` |
 | v0.9.1 | `AnalyticsEvent` retention policy — 18-month TTL delete (AD-013) | `0448e25` |
 | v0.10.0 | Notification module (`Notification`, `mastery_milestone` end-to-end, AD-014) | `ca1879a` |
-| v0.11.0 | Frontend test harness (`mathsmentor-frontend/`) + Phase 2 AI gate (AD-015) | `<pending>` |
+| v0.11.0 | Frontend test harness (`mathsmentor-frontend/`) + Phase 2 AI gate (AD-015) | `b5c1c0f` |
 
 ---
 
 ## 2026-07-28 — Frontend test harness built; Phase 1 end-to-end loop proven
 
-**Status:** TypeScript ✅ (backend + frontend) · ESLint ✅ (backend) · oxlint ✅ (frontend, 1 pre-existing warning) · backend Tests ✅ (215/215, 25 suites, unchanged) · frontend has no automated tests (see Tech Debt) · commit `<pending>`
+**Status:** TypeScript ✅ (backend + frontend) · ESLint ✅ (backend) · oxlint ✅ (frontend, 1 pre-existing warning) · backend Tests ✅ (215/215, 25 suites, unchanged) · frontend has no automated tests (see Tech Debt) · commit `b5c1c0f`
 
 **Completed**
 - `mathsmentor-frontend/` (Vite + React + TypeScript, `react-router-dom`) — a thin, deliberately unstyled test harness, not the product UI. Pages: login/register, student dashboard (profile creation, mastery table, full diagnostic loop, full practice loop), teacher dashboard (profile creation, class creation, roster + enroll/withdraw + membership history), parent dashboard (profile creation, link/unlink child by email, children table, notification-preference toggles), a shared layout with a polling notifications bell (unread badge, mark-read, mark-all-read).
