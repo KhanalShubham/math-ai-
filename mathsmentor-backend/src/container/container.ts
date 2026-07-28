@@ -7,8 +7,16 @@ import { MongoUserRepository } from '../infrastructure/persistence/mongoose/repo
 import { MongoRefreshTokenRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-refresh-token.repository';
 import { MongoVerificationTokenRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-verification-token.repository';
 import { MongoStudentRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-student.repository';
+import { MongoTopicRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-topic.repository';
+import { MongoQuestionRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-question.repository';
 import { createAuthService, type AuthService } from '../modules/auth/auth.service';
 import { createStudentService, type StudentService } from '../modules/student/student.service';
+import {
+  createQuestionService,
+  createTopicService,
+  type QuestionService,
+  type TopicService,
+} from '../modules/curriculum/curriculum.service';
 
 /**
  * Manual composition root (ARCHITECTURE.md §13). No DI framework — the object
@@ -26,6 +34,8 @@ export interface Container {
   jobQueue: JobQueue;
   authService: AuthService;
   studentService: StudentService;
+  topicService: TopicService;
+  questionService: QuestionService;
 }
 
 export function createContainer(): Container {
@@ -45,11 +55,18 @@ export function createContainer(): Container {
   const studentRepository = new MongoStudentRepository();
   const studentService = createStudentService({ studentRepository, eventBus });
 
+  const topicRepository = new MongoTopicRepository();
+  const questionRepository = new MongoQuestionRepository();
+  const topicService = createTopicService({ topicRepository, eventBus });
+  const questionService = createQuestionService({ questionRepository, topicRepository, eventBus });
+
   return {
     logger,
     eventBus,
     jobQueue,
     authService,
     studentService,
+    topicService,
+    questionService,
   };
 }
