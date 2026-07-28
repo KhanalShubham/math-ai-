@@ -3,6 +3,7 @@ import type { Container } from '../../container/container';
 import { createAuthRouter } from '../../modules/auth/auth.routes';
 import { createStudentRouter } from '../../modules/student/student.routes';
 import { createCurriculumRouter } from '../../modules/curriculum/curriculum.routes';
+import { createDiagnosticRouter } from '../../modules/diagnostic/diagnostic.routes';
 
 /** Composes all module routers under /api/v1. */
 export function createV1Router(container: Container): Router {
@@ -13,6 +14,10 @@ export function createV1Router(container: Container): Router {
   router.use(
     '/curriculum',
     createCurriculumRouter(container.topicService, container.questionService),
+  );
+  router.use(
+    '/diagnostic',
+    createDiagnosticRouter(container.diagnosticService, container.studentService),
   );
 
   return router;
