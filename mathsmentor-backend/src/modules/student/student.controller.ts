@@ -21,6 +21,9 @@ function toPublicProfile(profile: StudentProfile) {
     currentEstimatedGrade: profile.currentEstimatedGrade,
     classIds: profile.classIds,
     onboardingCompletedAt: profile.onboardingCompletedAt,
+    currentStreakDays: profile.currentStreakDays,
+    longestStreakDays: profile.longestStreakDays,
+    lastActiveDate: profile.lastActiveDate,
   };
 }
 

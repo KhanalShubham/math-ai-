@@ -226,4 +226,44 @@ describe('diagnostic routes (integration, real Mongo)', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it("lists all of a student's own attempts, newest first, for the learning-history view", async () => {
+    const { questionId } = await seedPublishedTopicWithQuestion('b');
+    const accessToken = await registerLoginAndCreateStudentProfile();
+
+    const firstRes = await request(app)
+      .post('/api/v1/diagnostic/attempts')
+      .set('Authorization', `Bearer ${accessToken}`);
+    await request(app)
+      .post(`/api/v1/diagnostic/attempts/${firstRes.body.attempt.id}/items`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ questionId, studentAnswer: 'b', timeTakenMs: 500, hintRequested: false });
+    await request(app)
+      .post(`/api/v1/diagnostic/attempts/${firstRes.body.attempt.id}/complete`)
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    const res = await request(app)
+      .get('/api/v1/diagnostic/attempts')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.attempts).toHaveLength(1);
+    expect(res.body.attempts[0].id).toBe(firstRes.body.attempt.id);
+  });
+
+  it("does not leak one student's attempts into another student's list", async () => {
+    await seedPublishedTopicWithQuestion();
+    const ownerToken = await registerLoginAndCreateStudentProfile();
+    const otherToken = await registerLoginAndCreateStudentProfile();
+
+    await request(app)
+      .post('/api/v1/diagnostic/attempts')
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    const res = await request(app)
+      .get('/api/v1/diagnostic/attempts')
+      .set('Authorization', `Bearer ${otherToken}`);
+
+    expect(res.body.attempts).toEqual([]);
+  });
 });

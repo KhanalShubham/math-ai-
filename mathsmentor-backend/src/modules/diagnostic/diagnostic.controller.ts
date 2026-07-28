@@ -25,6 +25,12 @@ export function createDiagnosticController(
       res.status(200).json({ attempt });
     }),
 
+    listMine: asyncHandler(async (req: Request, res: Response) => {
+      const profile = await studentService.getByUserId(req.user!.sub);
+      const attempts = await diagnosticService.listAttempts(profile.id);
+      res.status(200).json({ attempts });
+    }),
+
     get: asyncHandler(async (req: Request, res: Response) => {
       const { attemptId } = req.params as unknown as AttemptIdParam;
       const profile = await studentService.getByUserId(req.user!.sub);

@@ -109,6 +109,9 @@ class FakeStudentService implements Partial<StudentService> {
       classIds: [],
       parentIds: [],
       onboardingCompletedAt: null,
+      currentStreakDays: 0,
+      longestStreakDays: 0,
+      lastActiveDate: null,
       createdAt: new Date(),
     };
     this.profiles.set(profile.id, profile);

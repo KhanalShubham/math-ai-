@@ -15,5 +15,9 @@ export interface StudentProfile {
   classIds: string[];
   parentIds: string[];
   onboardingCompletedAt: Date | null;
+  /** Written only via recordActivity, called from the two event handlers in student.service (streak.ts). */
+  currentStreakDays: number;
+  longestStreakDays: number;
+  lastActiveDate: Date | null;
   createdAt: Date;
 }

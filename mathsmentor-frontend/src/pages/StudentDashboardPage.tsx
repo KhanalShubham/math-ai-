@@ -119,7 +119,162 @@ function MasterySection({ mastery, topicsById }: { mastery: MasteryRecord[]; top
   );
 }
 
-function DiagnosticSection({ token }: { token: string }) {
+const STRENGTH_THRESHOLD = 0.7;
+const WEAKNESS_THRESHOLD = 0.4;
+
+function StrengthsWeaknessesSection({
+  mastery,
+  topicsById,
+}: {
+  mastery: MasteryRecord[];
+  topicsById: Map<string, string>;
+}) {
+  const strengths = mastery.filter((m) => m.masteryScore >= STRENGTH_THRESHOLD);
+  const weaknesses = mastery.filter((m) => m.masteryScore < WEAKNESS_THRESHOLD);
+
+  return (
+    <section>
+      <h2>Strengths &amp; weaknesses</h2>
+      <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <h3 style={{ fontSize: '0.95rem' }}>Strengths (score ≥ {STRENGTH_THRESHOLD})</h3>
+          {strengths.length === 0 ? (
+            <p className="muted">None yet.</p>
+          ) : (
+            <ul>
+              {strengths.map((m) => (
+                <li key={m.id}>
+                  {topicsById.get(m.topicId) ?? m.topicId} ({m.masteryScore.toFixed(2)})
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <h3 style={{ fontSize: '0.95rem' }}>Weaknesses (score &lt; {WEAKNESS_THRESHOLD})</h3>
+          {weaknesses.length === 0 ? (
+            <p className="muted">None yet.</p>
+          ) : (
+            <ul>
+              {weaknesses.map((m) => (
+                <li key={m.id}>
+                  {topicsById.get(m.topicId) ?? m.topicId} ({m.masteryScore.toFixed(2)})
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const MASTERED_THRESHOLD = 0.8;
+const MAX_RECOMMENDATIONS = 3;
+
+function RecommendedTopicsSection({ mastery, topics }: { mastery: MasteryRecord[]; topics: Topic[] }) {
+  const scoreByTopic = new Map(mastery.map((m) => [m.topicId, m.masteryScore]));
+  const candidates = topics
+    .filter((t) => (scoreByTopic.get(t.id) ?? 0) < MASTERED_THRESHOLD)
+    .sort((a, b) => (scoreByTopic.get(a.id) ?? -1) - (scoreByTopic.get(b.id) ?? -1))
+    .slice(0, MAX_RECOMMENDATIONS);
+
+  return (
+    <section>
+      <h2>Recommended next</h2>
+      <p className="muted">
+        Not AI-powered yet — a simple placeholder sorted by lowest mastery score (unattempted
+        topics first). Phase 2's AI recommendation feature will replace this.
+      </p>
+      {candidates.length === 0 ? (
+        <p className="muted">Nothing to recommend — great work!</p>
+      ) : (
+        <ul>
+          {candidates.map((t) => {
+            const score = scoreByTopic.get(t.id);
+            return (
+              <li key={t.id}>
+                {t.name} {score === undefined ? '(not attempted yet)' : `(mastery ${score.toFixed(2)})`}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function LearningHistorySection({ token, refreshKey }: { token: string; refreshKey: number }) {
+  const [attempts, setAttempts] = useState<DiagnosticAttempt[]>([]);
+  const [sessions, setSessions] = useState<PracticeSession[]>([]);
+
+  useEffect(() => {
+    diagnosticApi.listAttempts(token).then(({ attempts }) => setAttempts(attempts));
+    practiceApi.listSessions(token).then(({ sessions }) => setSessions(sessions));
+    // refreshKey deliberately re-runs this fetch after practice/diagnostic
+    // activity elsewhere on the page — see refreshAfterActivity below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, refreshKey]);
+
+  return (
+    <section>
+      <h2>Learning history</h2>
+      <h3 style={{ fontSize: '0.95rem' }}>Diagnostic attempts</h3>
+      {attempts.length === 0 ? (
+        <p className="muted">No diagnostic attempts yet.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Started</th>
+              <th>Status</th>
+              <th>Items</th>
+              <th>Estimated grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {attempts.map((a) => (
+              <tr key={a.id}>
+                <td>{new Date(a.startedAt).toLocaleString()}</td>
+                <td>{a.status}</td>
+                <td>{a.items.length}</td>
+                <td>{a.finalGradeEstimate ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <h3 style={{ fontSize: '0.95rem', marginTop: '1rem' }}>Practice sessions</h3>
+      {sessions.length === 0 ? (
+        <p className="muted">No practice sessions yet.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Started</th>
+              <th>Status</th>
+              <th>Items</th>
+              <th>Correct</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sessions.map((s) => (
+              <tr key={s.id}>
+                <td>{new Date(s.startedAt).toLocaleString()}</td>
+                <td>{s.completedAt ? 'completed' : 'in progress'}</td>
+                <td>{s.items.length}</td>
+                <td>{s.items.filter((i) => i.isCorrect).length}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
+function DiagnosticSection({ token, onActivity }: { token: string; onActivity: () => void }) {
   const [attempt, setAttempt] = useState<DiagnosticAttempt | null>(null);
   const [nextQuestion, setNextQuestion] = useState<PublicQuestion | null>(null);
   const [answer, setAnswer] = useState('');
@@ -160,6 +315,7 @@ function DiagnosticSection({ token }: { token: string }) {
       setNextQuestion(result.nextQuestion);
       setAnswer('');
       setMessage(result.isCorrect ? 'Correct!' : 'Incorrect.');
+      onActivity();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit answer');
     }
@@ -207,7 +363,15 @@ function DiagnosticSection({ token }: { token: string }) {
   );
 }
 
-function PracticeSection({ token, topics }: { token: string; topics: Topic[] }) {
+function PracticeSection({
+  token,
+  topics,
+  onActivity,
+}: {
+  token: string;
+  topics: Topic[];
+  onActivity: () => void;
+}) {
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [session, setSession] = useState<PracticeSession | null>(null);
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
@@ -215,6 +379,21 @@ function PracticeSection({ token, topics }: { token: string; topics: Topic[] }) 
   const [answer, setAnswer] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    practiceApi.getCurrentSession(token).then(async ({ session }) => {
+      if (!session) return;
+      setSession(session);
+      setMessage('Resumed your in-progress practice session.');
+      const firstTopicId = session.topicIds[0];
+      if (firstTopicId) {
+        const { questions } = await curriculumApi.listQuestionsForTopic(token, firstTopicId);
+        setQuestions(questions);
+        setSelectedQuestionId(questions[0]?.id ?? '');
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   async function handleStart(e: FormEvent) {
     e.preventDefault();
@@ -245,6 +424,7 @@ function PracticeSection({ token, topics }: { token: string; topics: Topic[] }) 
       setSession(result.session);
       setAnswer('');
       setMessage(result.isCorrect ? 'Correct! (this may unlock a mastery milestone — check 🔔)' : 'Incorrect.');
+      onActivity();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit answer');
     }
@@ -320,6 +500,7 @@ export function StudentDashboardPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activityVersion, setActivityVersion] = useState(0);
 
   useEffect(() => {
     if (!token) return;
@@ -344,6 +525,17 @@ export function StudentDashboardPage() {
       }
     })();
   }, [token]);
+
+  async function refreshAfterActivity() {
+    if (!token) return;
+    const [{ student }, { mastery }] = await Promise.all([
+      studentApi.getMyProfile(token),
+      studentApi.getMyMastery(token),
+    ]);
+    setProfile(student);
+    setMastery(mastery);
+    setActivityVersion((v) => v + 1);
+  }
 
   if (!token) return null;
   if (loading) return <p className="muted">Loading…</p>;
@@ -372,13 +564,19 @@ export function StudentDashboardPage() {
           {profile.currentEstimatedGrade ?? 'not yet estimated'}
         </p>
         <p className="muted">
+          🔥 {profile.currentStreakDays}-day streak (best: {profile.longestStreakDays})
+        </p>
+        <p className="muted">
           Student ID (give this to a teacher to enroll you, or a parent to link you):{' '}
           <code>{profile.id}</code>
         </p>
       </section>
       <MasterySection mastery={mastery} topicsById={topicsById} />
-      <DiagnosticSection token={token} />
-      <PracticeSection token={token} topics={topics} />
+      <StrengthsWeaknessesSection mastery={mastery} topicsById={topicsById} />
+      <RecommendedTopicsSection mastery={mastery} topics={topics} />
+      <DiagnosticSection token={token} onActivity={refreshAfterActivity} />
+      <PracticeSection token={token} topics={topics} onActivity={refreshAfterActivity} />
+      <LearningHistorySection token={token} refreshKey={activityVersion} />
     </>
   );
 }

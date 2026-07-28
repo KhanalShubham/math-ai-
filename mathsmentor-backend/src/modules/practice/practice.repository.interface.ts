@@ -16,6 +16,8 @@ export interface CreatePracticeSessionInput {
 export interface PracticeRepository {
   findById(id: string): Promise<PracticeSession | null>;
   findInProgressForStudent(studentId: string): Promise<PracticeSession | null>;
+  /** All sessions (in progress or completed) for a student, newest first. */
+  findByStudent(studentId: string): Promise<PracticeSession[]>;
   create(input: CreatePracticeSessionInput): Promise<PracticeSession>;
   appendItem(sessionId: string, item: PracticeItem): Promise<PracticeSession>;
   complete(sessionId: string): Promise<void>;

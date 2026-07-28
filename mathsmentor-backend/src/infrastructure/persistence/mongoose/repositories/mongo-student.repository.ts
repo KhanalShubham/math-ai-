@@ -7,6 +7,7 @@ import type {
   UpdateStudentProfileInput,
 } from '../../../../modules/student/student.repository.interface';
 import type { StudentProfile } from '../../../../modules/student/student.types';
+import { computeStreakUpdate } from '../../../../modules/student/streak';
 
 function toStudentProfile(doc: {
   _id: Types.ObjectId;
@@ -20,6 +21,9 @@ function toStudentProfile(doc: {
   classIds: Types.ObjectId[];
   parentIds: Types.ObjectId[];
   onboardingCompletedAt?: Date | null;
+  currentStreakDays?: number;
+  longestStreakDays?: number;
+  lastActiveDate?: Date | null;
   createdAt: Date;
 }): StudentProfile {
   return {
@@ -34,6 +38,9 @@ function toStudentProfile(doc: {
     classIds: doc.classIds.map((id) => id.toString()),
     parentIds: doc.parentIds.map((id) => id.toString()),
     onboardingCompletedAt: doc.onboardingCompletedAt ?? null,
+    currentStreakDays: doc.currentStreakDays ?? 0,
+    longestStreakDays: doc.longestStreakDays ?? 0,
+    lastActiveDate: doc.lastActiveDate ?? null,
     createdAt: doc.createdAt,
   };
 }
@@ -110,5 +117,24 @@ export class MongoStudentRepository implements StudentRepository {
     await StudentProfileModel.findByIdAndUpdate(studentId, {
       $pull: { classIds: classId },
     }).exec();
+  }
+
+  async recordActivity(studentId: string, activityDate: Date): Promise<void> {
+    const doc = await StudentProfileModel.findById(studentId).exec();
+    if (!doc) return;
+
+    const updated = computeStreakUpdate(
+      {
+        currentStreakDays: doc.currentStreakDays ?? 0,
+        longestStreakDays: doc.longestStreakDays ?? 0,
+        lastActiveDate: doc.lastActiveDate ?? null,
+      },
+      activityDate,
+    );
+
+    doc.currentStreakDays = updated.currentStreakDays;
+    doc.longestStreakDays = updated.longestStreakDays;
+    doc.lastActiveDate = updated.lastActiveDate;
+    await doc.save();
   }
 }

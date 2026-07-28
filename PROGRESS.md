@@ -50,32 +50,32 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 | | |
 |---|---|
-| **Current Version** | v0.11.0 |
+| **Current Version** | v0.12.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `b5c1c0f` |
+| **Latest Commit** | `<pending>` |
 | **Backend Modules Complete** | 9 / 10 (+ MasteryRecord read model) |
 | **Frontend** | Test harness built (`mathsmentor-frontend/`) — not the product UI, see AD-015 |
-| **Overall Progress** | ~90% backend · Phase 1 product loop proven end-to-end |
-| **Test Status** | 215/215 backend passing (25 suites) — frontend has no automated tests (thin harness, manually driven end-to-end, see 2026-07-28 entry) |
+| **Overall Progress** | ~90% backend · Phase 1 product loop proven end-to-end · Student Learning Dashboard complete |
+| **Test Status** | 228/228 backend passing (25 suites) — frontend has no automated tests (thin harness, manually driven end-to-end, see dated entries) |
 | **TypeScript** | clean (backend + frontend) |
 | **ESLint** | clean (backend); frontend oxlint clean (1 pre-existing fast-refresh warning) |
 
 **Milestone Progress**
 ```
-███████████████████████████░░ 90% (backend) — Phase 1 gate cleared
+███████████████████████████░░ 90% (backend) — Phase 1 gate cleared; product-engineer mode active
 ```
 
 **Active Milestone**
-None — Phase 1 (Teacher/Parent/Analytics/Notification + frontend harness + e2e proof) complete; awaiting direction to begin Phase 2 (AI) — see stop condition below
+None — Student Learning Dashboard complete (functionality-first pass); Teacher Classroom Dashboard and Parent Progress Dashboard are next per the user's product-engineer-mode priority order, not yet started
 
 **Current Focus**
-Notification → frontend test harness (both complete; Phase 2 — AI Foundation — is next, not yet started)
+Frontend harness → Student Learning Dashboard (complete); Teacher Classroom Dashboard is next, not yet started
 
 **Blocked By**
 None
 
 **Next Architectural Decision**
-Phase 2 AI Foundation: the `AIProvider` abstraction (OpenAI/Claude/Gemini/Ollama implementations) plus `PromptBuilder`/`ConversationContext`/`TokenCounter`/`AIResponse`/`RateLimiter`/`SafetyGuard` — foundation only, no AI feature yet, per the user's explicit phase-gate instruction (see the Phase 2 Roadmap section below)
+Whether "recommended topics" gets a second, better non-AI heuristic (e.g. factoring in curriculum prerequisites) before Phase 2 AI replaces it — currently a simple mastery-score-ascending sort (see AD-017)
 
 **Current Task**
 None in progress. Per explicit instruction, do not begin AI, Deployment, CI/CD, or OpenAPI work until requested.
@@ -102,8 +102,8 @@ None in progress. Per explicit instruction, do not begin AI, Deployment, CI/CD, 
 **Repository Metrics**
 | | |
 |---|---|
-| Commits | 22 |
-| Tests | 215 |
+| Commits | 24 |
+| Tests | 228 |
 | Suites | 25 |
 | Coverage | not measured yet |
 | Build | Passing |
@@ -111,10 +111,10 @@ None in progress. Per explicit instruction, do not begin AI, Deployment, CI/CD, 
 **Codebase Size**
 | | |
 |---|---|
-| Source files (`src/`) | 132 |
-| Lines of code (`src/`) | ~6,646 |
+| Source files (`src/`) | 133 |
+| Lines of code (`src/`) | ~6,800 |
 | Domain modules (`src/modules/`) | 10 (9 implemented, 1 scaffolded) |
-| API endpoints | 58 |
+| API endpoints | 60 |
 | Test files | 26 |
 
 **Module Completion**
@@ -136,7 +136,7 @@ None in progress. Per explicit instruction, do not begin AI, Deployment, CI/CD, 
 ¹ `StudyPlan` (DOMAIN_MODEL.md §2.10) is still owned by `student` but not yet built — "frozen" describes `StudentProfile` + `MasteryRecord` + the narrow `addClassLink`/`removeClassLink`/`removeParentLink`/`getById` additions the Teacher/Parent modules required (AD-011 and the parent-link contract); the module reopens narrowly for these, not a full unfreeze.
 ² `findUserByEmail`/`findByEmail` were added narrowly to support Teacher/Parent cross-module lookups (no passwordHash exposed) — same narrow-reopening pattern as Student's additions, not a full unfreeze.
 ³ Analytics subscribes to every event type published by every other module (see AD-012) — it reopens no other module's code (only imports each module's `*.events.ts` constants/types, the same read-only pattern MasteryRecord already established), so "frozen" here describes analytics' own write path, not a reopening of any other module.
-⁴ Notification required a genuine, narrow reopening of `student`'s frozen `mastery.service` — its first-ever published event, `MasteryMilestoneReached` (AD-014) — not just a read-only events-file import like Analytics' pattern. Only `mastery_milestone` is wired end-to-end today; `streak_reminder`/`weekly_report`/`assignment_due` are deferred (see Known Risks/Tech Debt) since each needs infrastructure or product data (a streak concept, a scheduled job runner, assignment due dates) this codebase doesn't have yet.
+⁴ Notification required a genuine, narrow reopening of `student`'s frozen `mastery.service` — its first-ever published event, `MasteryMilestoneReached` (AD-014) — not just a read-only events-file import like Analytics' pattern. Only `mastery_milestone` is wired end-to-end today; `streak_reminder`/`weekly_report`/`assignment_due` are still deferred (see Known Risks/Tech Debt). A streak concept now exists (AD-016), so `streak_reminder` is no longer blocked on "no streak data" — it's still blocked on the same scheduled/cron job runner gap as `weekly_report` (detecting "streak about to lapse" needs a time-based trigger, not just an event to react to).
 
 **Production Readiness**
 - ☐ OpenAPI complete
@@ -234,7 +234,7 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 
 **Decisions Frozen** (do not reopen absent a bug or genuine architectural issue):
 - Authentication
-- Student module (`StudentProfile` + `MasteryRecord` — see footnote above; mastery.service's narrow AD-014 reopening is documented there, not here)
+- Student module (`StudentProfile` + `MasteryRecord` — see footnote above; mastery.service's narrow AD-014 reopening and the streak fields' AD-016 reopening are both documented there, not here)
 - Curriculum module
 - Diagnostic module
 - Practice module
@@ -254,7 +254,8 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - Analytics has no wildcard event subscription (AD-012) — a new event type published by any module is silently absent from the analytics/audit log until `analytics.service.ts` is updated to add an explicit handler for it. Nothing fails loudly; this depends on code-review discipline the same way MasteryRecord's single-writer rule does.
 - `AnalyticsEvent`'s 18-month TTL (AD-013) is a hard delete, not archive-then-delete — once a document expires it is gone, with no aggregated/rolled-up record surviving it. Acceptable today since no reporting feature depends on data older than 18 months, but revisit before any dashboard promises multi-year trend data.
 - `MasteryMilestoneReached` (AD-014) fires every time a topic's score crosses the 0.8 threshold upward, not just the first time ever — a score that dips below and later re-crosses fires again. Documented simplification (a true once-ever achievement needs persisted state this module doesn't track today), not a bug.
-- Notification only wires up `mastery_milestone` of the four `NotificationType`s DOMAIN_MODEL.md §2.12 defines. `streak_reminder` has no streak concept anywhere in the codebase; `weekly_report` needs a scheduled/cron job runner (`JobQueue` only supports enqueue-and-run-once, no recurring schedule); `assignment_due` needs a due date on `PracticeSession`, which doesn't exist (`teacher_assigned` practice creation is itself still unbuilt — see Practice's existing tech debt). All three are real gaps, not silent oversights.
+- Notification only wires up `mastery_milestone` of the four `NotificationType`s DOMAIN_MODEL.md §2.12 defines. `weekly_report` needs a scheduled/cron job runner (`JobQueue` only supports enqueue-and-run-once, no recurring schedule); `assignment_due` needs a due date on `PracticeSession`, which doesn't exist (`teacher_assigned` practice creation is itself still unbuilt — see Practice's existing tech debt); `streak_reminder` now has real streak data to react to (AD-016) but still needs the same scheduled-job capability as `weekly_report` to detect "about to lapse." All three are real gaps, not silent oversights.
+- `computeStreakUpdate` (AD-016) treats any gap of more than one day — or an activity dated before the last recorded day — identically, resetting to 1. Backdated/out-of-order activity (which shouldn't happen in normal use, since events are recorded with the current time at submission) would reset a streak rather than correctly reinserting into history. Documented simplification, not a bug in the common path.
 - Notification doesn't yet notify a student's linked parents when the student hits a mastery milestone — a natural extension once real product demand exists, deliberately not built now to avoid scope creep (would need per-parent `notificationPreferences` handling).
 - The frontend test harness stores its access token in `localStorage` and has no refresh-token flow (AD-015) — acceptable for a local-only harness against a dev backend, never acceptable for the real product frontend when that's eventually built.
 - `npm run mint-admin-token` (backend) is a genuine, if narrow, way to obtain an admin JWT locally — it requires the same `JWT_ACCESS_SECRET` a developer already has in their local `.env`, so it grants nothing new, but it's still worth knowing this script exists if reasoning about the local dev environment's trust boundary.
@@ -269,7 +270,8 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - No background reconciliation job exists yet for either two-aggregate write contract (parent-link or AD-011's class-enrollment) — both are documented as eventually-consistent-on-failure, not actually monitored/repaired.
 - Analytics' two read endpoints (`GET /analytics/students/:studentId/events`, `GET /analytics/events/count`) are minimal reporting primitives (indexed reads, no aggregation pipeline) — real teacher/admin dashboards will need proper aggregation queries once a concrete reporting requirement exists (ARCHITECTURE.md §13 guidance: build the aggregation pipeline only once a real latency problem appears, not preemptively).
 - `DiagnosticCompleted` and `PracticeItemSubmitted` don't carry their own attempt/session id in their event payload, so analytics' projected `AnalyticsEvent.aggregateId` for those two event types points at the student/question instead of the actual attempt/session document — documented in `analytics.service.ts`, not a data-loss bug (the source records are still fully queryable through `diagnostic`/`practice` directly).
-- Notification's `streak_reminder`, `weekly_report`, and `assignment_due` types are unwired (see Known Risks) — each is blocked on infrastructure or product data that doesn't exist yet, tracked here rather than silently dropped.
+- Notification's `weekly_report`, `assignment_due`, and (now data-ready but still trigger-blocked) `streak_reminder` types are unwired (see Known Risks) — each is blocked on infrastructure or product data that doesn't exist yet, tracked here rather than silently dropped.
+- `GET /diagnostic/attempts` and `GET /practice/sessions` (learning-history list endpoints, added for the Student Learning Dashboard) return every attempt/session for a student with no pagination or limit — fine for a new pre-launch product, will need a limit/cursor before a long-tenured real student's history grows large.
 - No email delivery exists for Notification — `deliveredVia` is always `['in_app']` today; DOMAIN_MODEL.md's `'email'` channel option is modeled but unimplemented, same "Phase 9 log-line" placeholder status as auth's verification/password-reset emails (`auth.service.ts`).
 - `mathsmentor-frontend` has no automated test suite (unit or e2e) — it was verified once, manually, end-to-end via a throwaway Playwright script (not committed) against a real running backend (2026-07-28 entry below). If the harness grows or the AI phase adds new screens, revisit whether that's still an acceptable verification method or whether a committed e2e suite is warranted.
 - The frontend harness has no UI for creating a `School` (by design — see README) — a teacher can't self-serve a school, and there's no in-app path around `npm run mint-admin-token` + a manual curl call. Fine for a local dev harness, would need a real onboarding flow for any actual product.
@@ -389,6 +391,31 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 
 **Status:** Frozen (the phase-gate + split itself; the harness's own internals are explicitly not frozen — iterate on it freely) · **Introduced:** v0.11.0 · **Last reviewed:** v0.11.0
 
+### AD-016 — Study streak lives on `StudentProfile`, computed by a pure function, updated via two new `student.service` event subscriptions
+
+**Decision:** `currentStreakDays`, `longestStreakDays`, and `lastActiveDate` are added directly to `StudentProfile` (not a new collection/module). The day-boundary arithmetic (same-day no-op, next-day increment, gap-or-earlier reset to 1) lives in a pure function, `computeStreakUpdate` (`src/modules/student/streak.ts`), called by `StudentRepository.recordActivity` — the only write path, itself called only from two new `student.service` subscriptions to `PracticeItemSubmitted` and `DiagnosticCompleted`.
+
+**Why:** the user's product-engineer-mode instruction (2026-07-28) asked for a real student-facing "study streak," reopening the functionality backlog. DOMAIN_MODEL.md never modeled a Streak collection — ARCHITECTURE.md §21.1's own event-flow example mentions a hypothetical `streak.onAttempt` handler, but no `streak` module was ever formalized in the module table. Since `student` already owns `StudentProfile` and AD-002 says one module owns one collection, adding three fields to the existing frozen aggregate (a narrow, documented reopening, same category as AD-011/AD-014) is simpler than standing up a new module/collection for three fields and one computation. The computation itself was pulled out into a pure, standalone function — unlike `MasteryRecord`'s recency-weighted blending, which lives inline in its Mongo repository — specifically so the day-boundary edge cases (same-day, next-day, gap, out-of-order) are directly unit-testable without a fake or real database.
+
+**Alternatives considered:**
+1. *A dedicated `streak` module with its own `StreakRecord` collection*, mirroring `MasteryRecord`'s pattern. Rejected — three scalar fields don't justify a new collection/module/repository/event-subscriber-registration for what `student` can hold directly; `MasteryRecord` needed its own collection because it's per-(student, topic), not per-student, so it doesn't fit on `StudentProfile` at all — streak has no such multiplicity problem.
+2. *Compute streak lazily at read time* (e.g., derive it from `PracticeSession`/`DiagnosticAttempt` timestamps whenever the profile is fetched) instead of maintaining it incrementally. Rejected — would require querying two other modules' collections on every profile read (violates AD-002's "read only through that module's service" for what should be a cheap, already-materialized field), and turns a O(1) field read into an O(n) scan over a student's full history.
+3. *Embed the day-arithmetic directly in the Mongo repository*, matching `MasteryRecord`'s precedent exactly. Rejected — day-boundary bugs (off-by-one on gaps, timezone edge cases) are exactly the kind of logic that benefits from direct unit tests against plain inputs/outputs, more than an integration-only check through a repository would give.
+
+**Status:** Frozen · **Introduced:** v0.12.0 · **Last reviewed:** v0.12.0
+
+### AD-017 — "Recommended topics" gets a deterministic non-AI placeholder now, explicitly labeled as one
+
+**Decision:** The Student Learning Dashboard's "Recommended next" section sorts published topics by ascending mastery score (unattempted topics first, topics already at/above the mastery threshold excluded), entirely computed client-side from data the dashboard already fetches — no new backend endpoint. The UI explicitly labels this as a placeholder ("Not AI-powered yet... Phase 2's AI recommendation feature will replace this").
+
+**Why:** the user's product-engineer-mode functionality list includes "view recommended topics" under Student, but recommendation is also AI Feature priority #3, gated behind the AD-015 Phase 2 gate. Asked directly, the user chose to ship a real, useful placeholder now rather than omit the feature or quietly fake an "AI" label on a non-AI heuristic — the explicit labeling is the load-bearing part of the decision, not just the sort itself.
+
+**Alternatives considered:**
+1. *Omit "recommended topics" from the dashboard entirely until real AI recommendation exists.* Considered and rejected by the user directly (asked, declined) — leaves a real, low-cost piece of user value on the table for a gate that's about avoiding premature AI *infrastructure*, not about withholding every recommendation-shaped feature.
+2. *Label it as "AI recommendation" without disclosing it's a simple sort.* Rejected — would misrepresent a deterministic mastery-score sort as an AI feature, undermining trust in whatever the real Phase 2 AI recommendation eventually says.
+
+**Status:** Frozen (revisit when Phase 2's real recommendation feature ships — this placeholder is explicitly temporary) · **Introduced:** v0.12.0 · **Last reviewed:** v0.12.0
+
 ---
 
 ## Releases
@@ -407,6 +434,35 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 | v0.9.1 | `AnalyticsEvent` retention policy — 18-month TTL delete (AD-013) | `0448e25` |
 | v0.10.0 | Notification module (`Notification`, `mastery_milestone` end-to-end, AD-014) | `ca1879a` |
 | v0.11.0 | Frontend test harness (`mathsmentor-frontend/`) + Phase 2 AI gate (AD-015) | `b5c1c0f` |
+| v0.12.0 | Student Learning Dashboard: study streak (AD-016), learning history, strengths/weaknesses, recommended-topics placeholder (AD-017), resume-in-progress-practice | `<pending>` |
+
+---
+
+## 2026-07-28 — Student Learning Dashboard complete
+
+**What a real user can now do that they couldn't before:** a student can see how many consecutive days they've studied (and their best-ever streak); see every past diagnostic attempt and practice session in one place, not just "current"; see which topics they're strong or weak at without doing mental math over the raw mastery table; get a concrete "study this next" suggestion instead of an empty dashboard; and reload the page mid-practice-session without losing their place.
+
+**Status:** TypeScript ✅ (backend + frontend) · ESLint ✅ (backend) · oxlint ✅ (frontend) · backend Tests ✅ (228/228, 25 suites, +13) · frontend manually verified end-to-end (see below) · commit `<pending>`
+
+**Completed**
+- **Study streak** (AD-016) — `StudentProfile` gains `currentStreakDays`/`longestStreakDays`/`lastActiveDate`, computed by a pure, directly-unit-tested function (`computeStreakUpdate`) and updated via two new `student.service` subscriptions to `PracticeItemSubmitted`/`DiagnosticCompleted`. Verified live in a browser: a real practice submission bumped the dashboard from "no streak" to "🔥 1-day streak."
+- **Learning history** — `GET /diagnostic/attempts` and `GET /practice/sessions` (list-all-mine, newest first) added alongside the existing "current" endpoints; the dashboard renders both as tables. Verified the practice-session row updates immediately (items/correct counts) right after answering, not just on next page load.
+- **Strengths & weaknesses** — derived client-side from the mastery list already fetched (≥0.7 strength, <0.4 weakness) — no new backend endpoint needed.
+- **Recommended next topics** (AD-017) — a deliberate, clearly-labeled non-AI placeholder: published topics sorted by ascending mastery score, unattempted topics first, already-mastered topics excluded. Explicitly framed in the UI as a placeholder Phase 2's real AI recommendation will replace — resolved directly with the user rather than assumed.
+- **Resume in-progress practice** — the dashboard now checks `GET /practice/sessions/current` on load and reconstructs the in-progress session (including refetching that topic's question list) instead of only ever offering "start a new session." Verified via reload-mid-session in a real browser.
+- Found and fixed one real bug during manual verification: the Learning History table only fetched once on mount and never refreshed after new activity on the same page — fixed by threading an `activityVersion` counter down as a re-fetch trigger.
+
+**Architecture decisions**
+- **AD-016** (new) — where streak lives (`StudentProfile`, not a new module/collection) and why its computation is a pure function rather than embedded in the Mongo repository (contrast with `MasteryRecord`'s precedent).
+- **AD-017** (new) — the non-AI "recommended topics" placeholder decision, made directly with the user given the tension between the Student functionality list and the AD-015 AI-Phase-2 gate.
+
+**Known technical debt**
+- `computeStreakUpdate` resets on any gap or out-of-order activity rather than reinserting into history — fine for the normal (chronological) case.
+- The two new list endpoints have no pagination — fine pre-launch, needs a limit/cursor eventually.
+- `mathsmentor-frontend` still has no committed automated test suite — this pass, like the previous one, was verified via a throwaway Playwright script, not committed to the repo.
+
+**Next milestone**
+Per the user's product-engineer-mode priority order (Student → Teacher → Parent → Analytics → Notification → AI), the **Teacher Classroom Dashboard** is next: mastery per student, weak/strong students, assign practice, diagnostic results, compare students, filter by class/topic — not yet started, awaiting confirmation before beginning.
 
 ---
 

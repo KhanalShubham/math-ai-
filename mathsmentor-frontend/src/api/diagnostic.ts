@@ -29,6 +29,10 @@ export function getCurrentAttempt(token: string) {
   });
 }
 
+export function listAttempts(token: string) {
+  return apiRequest<{ attempts: DiagnosticAttempt[] }>('/diagnostic/attempts', { token });
+}
+
 export function submitItem(
   token: string,
   attemptId: string,

@@ -52,6 +52,11 @@ export class MongoPracticeRepository implements PracticeRepository {
     return doc ? toPracticeSession(doc) : null;
   }
 
+  async findByStudent(studentId: string): Promise<PracticeSession[]> {
+    const docs = await PracticeSessionModel.find({ studentId }).sort({ startedAt: -1 }).exec();
+    return docs.map(toPracticeSession);
+  }
+
   async create(input: CreatePracticeSessionInput): Promise<PracticeSession> {
     const doc = await PracticeSessionModel.create({
       studentId: input.studentId,

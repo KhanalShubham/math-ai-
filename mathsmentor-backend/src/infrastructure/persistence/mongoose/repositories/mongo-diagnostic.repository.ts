@@ -64,6 +64,11 @@ export class MongoDiagnosticRepository implements DiagnosticRepository {
     return doc ? toDiagnosticAttempt(doc) : null;
   }
 
+  async findByStudent(studentId: string): Promise<DiagnosticAttempt[]> {
+    const docs = await DiagnosticAttemptModel.find({ studentId }).sort({ startedAt: -1 }).exec();
+    return docs.map(toDiagnosticAttempt);
+  }
+
   async create(studentId: string): Promise<DiagnosticAttempt> {
     const doc = await DiagnosticAttemptModel.create({ studentId });
     return toDiagnosticAttempt(doc);

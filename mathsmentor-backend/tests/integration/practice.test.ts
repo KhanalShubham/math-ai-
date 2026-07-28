@@ -234,4 +234,69 @@ describe('practice routes (integration, real Mongo)', () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
+
+  it('lists all of a student\'s own sessions, newest first, for the learning-history view', async () => {
+    const { topicId } = await seedPublishedTopicWithQuestion();
+    const accessToken = await registerLoginAndCreateStudentProfile();
+
+    const firstRes = await request(app)
+      .post('/api/v1/practice/sessions')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ source: 'self_selected', topicIds: [topicId] });
+    await request(app)
+      .post(`/api/v1/practice/sessions/${firstRes.body.session.id}/complete`)
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    const secondRes = await request(app)
+      .post('/api/v1/practice/sessions')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ source: 'self_selected', topicIds: [topicId] });
+
+    const res = await request(app)
+      .get('/api/v1/practice/sessions')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.sessions).toHaveLength(2);
+    expect(res.body.sessions[0].id).toBe(secondRes.body.session.id);
+  });
+
+  it("does not leak one student's sessions into another student's list", async () => {
+    const { topicId } = await seedPublishedTopicWithQuestion();
+    const ownerToken = await registerLoginAndCreateStudentProfile();
+    const otherToken = await registerLoginAndCreateStudentProfile();
+
+    await request(app)
+      .post('/api/v1/practice/sessions')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ source: 'self_selected', topicIds: [topicId] });
+
+    const res = await request(app)
+      .get('/api/v1/practice/sessions')
+      .set('Authorization', `Bearer ${otherToken}`);
+
+    expect(res.body.sessions).toEqual([]);
+  });
+
+  it('records a study-streak day on the student profile after a real practice submission', async () => {
+    const { topicId, questionId } = await seedPublishedTopicWithQuestion('b');
+    const accessToken = await registerLoginAndCreateStudentProfile();
+
+    const startRes = await request(app)
+      .post('/api/v1/practice/sessions')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ source: 'self_selected', topicIds: [topicId] });
+    await request(app)
+      .post(`/api/v1/practice/sessions/${startRes.body.session.id}/items`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ questionId, studentAnswer: 'b', timeTakenMs: 500, hintsUsedCount: 0 });
+
+    const profileRes = await request(app)
+      .get('/api/v1/students/profile')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(profileRes.body.student.currentStreakDays).toBe(1);
+    expect(profileRes.body.student.longestStreakDays).toBe(1);
+    expect(profileRes.body.student.lastActiveDate).not.toBeNull();
+  });
 });

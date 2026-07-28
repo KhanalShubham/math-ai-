@@ -21,6 +21,9 @@ const studentProfileSchema = new Schema(
     classIds: { type: [Schema.Types.ObjectId], ref: 'ClassGroup', required: true, default: [] },
     parentIds: { type: [Schema.Types.ObjectId], ref: 'User', required: true, default: [] },
     onboardingCompletedAt: { type: Date, default: null },
+    currentStreakDays: { type: Number, required: true, default: 0 },
+    longestStreakDays: { type: Number, required: true, default: 0 },
+    lastActiveDate: { type: Date, default: null },
   },
   { timestamps: true },
 );

@@ -23,6 +23,14 @@ export function startSession(token: string, topicIds: string[]) {
   });
 }
 
+export function getCurrentSession(token: string) {
+  return apiRequest<{ session: PracticeSession | null }>('/practice/sessions/current', { token });
+}
+
+export function listSessions(token: string) {
+  return apiRequest<{ sessions: PracticeSession[] }>('/practice/sessions', { token });
+}
+
 export function submitItem(
   token: string,
   sessionId: string,

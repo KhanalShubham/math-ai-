@@ -2,6 +2,9 @@ import { randomBytes } from 'node:crypto';
 import { InProcessEventBus } from '../../src/infrastructure/events/in-process.event-bus';
 import { createStudentService } from '../../src/modules/student/student.service';
 import { STUDENT_EVENTS } from '../../src/modules/student/student.events';
+import { PRACTICE_EVENTS } from '../../src/modules/practice/practice.events';
+import { DIAGNOSTIC_EVENTS } from '../../src/modules/diagnostic/diagnostic.events';
+import { computeStreakUpdate, type StreakState } from '../../src/modules/student/streak';
 import type {
   CreateStudentProfileInput,
   StudentRepository,
@@ -45,6 +48,9 @@ class FakeStudentRepository implements StudentRepository {
       classIds: [],
       parentIds: [],
       onboardingCompletedAt: null,
+      currentStreakDays: 0,
+      longestStreakDays: 0,
+      lastActiveDate: null,
       createdAt: new Date(),
     };
     this.profiles.set(profile.id, profile);
@@ -88,6 +94,22 @@ class FakeStudentRepository implements StudentRepository {
   async removeClassLink(studentId: string, classId: string): Promise<void> {
     const profile = this.profiles.get(studentId);
     if (profile) profile.classIds = profile.classIds.filter((id) => id !== classId);
+  }
+
+  async recordActivity(studentId: string, activityDate: Date): Promise<void> {
+    const profile = this.profiles.get(studentId);
+    if (!profile) return;
+    const updated = computeStreakUpdate(
+      {
+        currentStreakDays: profile.currentStreakDays,
+        longestStreakDays: profile.longestStreakDays,
+        lastActiveDate: profile.lastActiveDate,
+      },
+      activityDate,
+    );
+    profile.currentStreakDays = updated.currentStreakDays;
+    profile.longestStreakDays = updated.longestStreakDays;
+    profile.lastActiveDate = updated.lastActiveDate;
   }
 }
 
@@ -201,5 +223,100 @@ describe('student.service', () => {
 
     const stored = await studentRepository.findById(profile.id);
     expect(stored?.parentIds).toEqual([parentId]);
+  });
+
+  it('records a study-streak day on PracticeItemSubmitted', async () => {
+    const { service, studentRepository, eventBus } = buildService();
+    const userId = fakeId();
+    const profile = await service.createProfile({ ...NEW_PROFILE_INPUT, userId });
+
+    await eventBus.publish(PRACTICE_EVENTS.PracticeItemSubmitted, {
+      studentId: profile.id,
+      topicId: fakeId(),
+      questionId: fakeId(),
+      isCorrect: true,
+    });
+
+    const stored = await studentRepository.findById(profile.id);
+    expect(stored?.currentStreakDays).toBe(1);
+    expect(stored?.longestStreakDays).toBe(1);
+    expect(stored?.lastActiveDate).not.toBeNull();
+  });
+
+  it('records a study-streak day on DiagnosticCompleted', async () => {
+    const { service, studentRepository, eventBus } = buildService();
+    const userId = fakeId();
+    const profile = await service.createProfile({ ...NEW_PROFILE_INPUT, userId });
+
+    await eventBus.publish(DIAGNOSTIC_EVENTS.DiagnosticCompleted, {
+      studentId: profile.id,
+      finalGradeEstimate: 6,
+      topicBreakdown: [],
+    });
+
+    const stored = await studentRepository.findById(profile.id);
+    expect(stored?.currentStreakDays).toBe(1);
+  });
+
+  it('does not double-count a streak day for two activities on the same day', async () => {
+    const { service, studentRepository, eventBus } = buildService();
+    const userId = fakeId();
+    const profile = await service.createProfile({ ...NEW_PROFILE_INPUT, userId });
+
+    await eventBus.publish(PRACTICE_EVENTS.PracticeItemSubmitted, {
+      studentId: profile.id,
+      topicId: fakeId(),
+      questionId: fakeId(),
+      isCorrect: true,
+    });
+    await eventBus.publish(PRACTICE_EVENTS.PracticeItemSubmitted, {
+      studentId: profile.id,
+      topicId: fakeId(),
+      questionId: fakeId(),
+      isCorrect: false,
+    });
+
+    const stored = await studentRepository.findById(profile.id);
+    expect(stored?.currentStreakDays).toBe(1);
+  });
+});
+
+describe('computeStreakUpdate', () => {
+  const EMPTY: StreakState = { currentStreakDays: 0, longestStreakDays: 0, lastActiveDate: null };
+
+  it('starts a new streak at 1 for the first-ever activity', () => {
+    const result = computeStreakUpdate(EMPTY, new Date('2026-01-01T10:00:00Z'));
+    expect(result).toMatchObject({ currentStreakDays: 1, longestStreakDays: 1 });
+  });
+
+  it('does not change the streak for a second activity on the same day', () => {
+    const first = computeStreakUpdate(EMPTY, new Date('2026-01-01T09:00:00Z'));
+    const second = computeStreakUpdate(first, new Date('2026-01-01T21:00:00Z'));
+    expect(second.currentStreakDays).toBe(1);
+  });
+
+  it('increments the streak for activity on the very next calendar day', () => {
+    const first = computeStreakUpdate(EMPTY, new Date('2026-01-01T09:00:00Z'));
+    const second = computeStreakUpdate(first, new Date('2026-01-02T09:00:00Z'));
+    expect(second.currentStreakDays).toBe(2);
+    expect(second.longestStreakDays).toBe(2);
+  });
+
+  it('resets the streak to 1 after a gap of more than one day', () => {
+    const first = computeStreakUpdate(EMPTY, new Date('2026-01-01T09:00:00Z'));
+    const second = computeStreakUpdate(first, new Date('2026-01-05T09:00:00Z'));
+    expect(second.currentStreakDays).toBe(1);
+  });
+
+  it('keeps longestStreakDays at its historical peak after a reset', () => {
+    let state = EMPTY;
+    state = computeStreakUpdate(state, new Date('2026-01-01T09:00:00Z'));
+    state = computeStreakUpdate(state, new Date('2026-01-02T09:00:00Z'));
+    state = computeStreakUpdate(state, new Date('2026-01-03T09:00:00Z'));
+    expect(state.longestStreakDays).toBe(3);
+
+    state = computeStreakUpdate(state, new Date('2026-01-10T09:00:00Z'));
+    expect(state.currentStreakDays).toBe(1);
+    expect(state.longestStreakDays).toBe(3);
   });
 });

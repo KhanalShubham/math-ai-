@@ -26,6 +26,12 @@ export function createPracticeController(
       res.status(200).json({ session });
     }),
 
+    listMine: asyncHandler(async (req: Request, res: Response) => {
+      const profile = await studentService.getByUserId(req.user!.sub);
+      const sessions = await practiceService.listSessions(profile.id);
+      res.status(200).json({ sessions });
+    }),
+
     get: asyncHandler(async (req: Request, res: Response) => {
       const { sessionId } = req.params as unknown as SessionIdParam;
       const profile = await studentService.getByUserId(req.user!.sub);

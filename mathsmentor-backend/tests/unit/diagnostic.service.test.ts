@@ -36,6 +36,12 @@ class FakeDiagnosticRepository implements DiagnosticRepository {
     );
   }
 
+  async findByStudent(studentId: string): Promise<DiagnosticAttempt[]> {
+    return [...this.attempts.values()]
+      .filter((a) => a.studentId === studentId)
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+  }
+
   async create(studentId: string): Promise<DiagnosticAttempt> {
     const attempt: DiagnosticAttempt = {
       id: fakeId(),

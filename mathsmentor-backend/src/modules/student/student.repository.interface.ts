@@ -39,4 +39,11 @@ export interface StudentRepository {
   /** The ONLY write path for classIds — called exclusively from teacher.service's enrollment flow (AD-011), never from a controller. */
   addClassLink(studentId: string, classId: string): Promise<void>;
   removeClassLink(studentId: string, classId: string): Promise<void>;
+  /**
+   * The ONLY write path for the streak fields — called exclusively from
+   * student.service's PracticeItemSubmitted/DiagnosticCompleted handlers
+   * (streak.ts's computeStreakUpdate), never from a controller (PROGRESS.md
+   * AD-016, same single-write-path convention as MasteryRecord).
+   */
+  recordActivity(studentId: string, activityDate: Date): Promise<void>;
 }

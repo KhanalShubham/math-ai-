@@ -26,6 +26,7 @@ export interface PracticeService {
     assignedByTeacherId?: string | null,
   ): Promise<PracticeSession>;
   getCurrentSession(studentId: string): Promise<PracticeSession | null>;
+  listSessions(studentId: string): Promise<PracticeSession[]>;
   getSession(id: string, studentId: string): Promise<PracticeSession>;
   submitItem(
     sessionId: string,
@@ -80,6 +81,10 @@ export function createPracticeService(deps: PracticeServiceDeps): PracticeServic
 
     async getCurrentSession(studentId) {
       return deps.practiceRepository.findInProgressForStudent(studentId);
+    },
+
+    async listSessions(studentId) {
+      return deps.practiceRepository.findByStudent(studentId);
     },
 
     async getSession(id, studentId) {

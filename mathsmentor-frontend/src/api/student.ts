@@ -12,6 +12,9 @@ export interface StudentProfile {
   currentEstimatedGrade: number | null;
   classIds: string[];
   onboardingCompletedAt: string | null;
+  currentStreakDays: number;
+  longestStreakDays: number;
+  lastActiveDate: string | null;
 }
 
 export interface MasteryRecord {

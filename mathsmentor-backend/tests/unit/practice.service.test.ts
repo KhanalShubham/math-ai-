@@ -31,6 +31,12 @@ class FakePracticeRepository implements PracticeRepository {
     );
   }
 
+  async findByStudent(studentId: string): Promise<PracticeSession[]> {
+    return [...this.sessions.values()]
+      .filter((s) => s.studentId === studentId)
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+  }
+
   async create(input: CreatePracticeSessionInput): Promise<PracticeSession> {
     const session: PracticeSession = {
       id: fakeId(),

@@ -15,6 +15,8 @@ export interface AppendDiagnosticItemInput extends DiagnosticItem {
 export interface DiagnosticRepository {
   findById(id: string): Promise<DiagnosticAttempt | null>;
   findInProgressForStudent(studentId: string): Promise<DiagnosticAttempt | null>;
+  /** All attempts (in progress, completed, or abandoned) for a student, newest first. */
+  findByStudent(studentId: string): Promise<DiagnosticAttempt[]>;
   create(studentId: string): Promise<DiagnosticAttempt>;
   appendItem(attemptId: string, item: AppendDiagnosticItemInput): Promise<DiagnosticAttempt>;
   complete(

@@ -1,5 +1,7 @@
 import type { EventBus } from '../../infrastructure/events/event-bus.interface';
 import { ConflictError, NotFoundError } from '../../errors';
+import { DIAGNOSTIC_EVENTS, type DiagnosticCompletedPayload } from '../diagnostic/diagnostic.events';
+import { PRACTICE_EVENTS, type PracticeItemSubmittedPayload } from '../practice/practice.events';
 import type {
   CreateStudentProfileInput,
   StudentRepository,
@@ -27,7 +29,28 @@ export interface StudentServiceDeps {
   eventBus: EventBus;
 }
 
+/**
+ * Subscribes to PracticeItemSubmitted/DiagnosticCompleted purely to record a
+ * day of learning activity for the streak fields (PROGRESS.md AD-016) —
+ * studentRepository.recordActivity is the ONLY write path for those fields,
+ * called only from these two handlers, never from a controller (same
+ * single-write-path convention as MasteryRecord/AnalyticsEvent).
+ */
 export function createStudentService(deps: StudentServiceDeps): StudentService {
+  deps.eventBus.subscribe<PracticeItemSubmittedPayload>(
+    PRACTICE_EVENTS.PracticeItemSubmitted,
+    async (event) => {
+      await deps.studentRepository.recordActivity(event.payload.studentId, new Date());
+    },
+  );
+
+  deps.eventBus.subscribe<DiagnosticCompletedPayload>(
+    DIAGNOSTIC_EVENTS.DiagnosticCompleted,
+    async (event) => {
+      await deps.studentRepository.recordActivity(event.payload.studentId, new Date());
+    },
+  );
+
   return {
     async createProfile(input) {
       const existing = await deps.studentRepository.findByUserId(input.userId);

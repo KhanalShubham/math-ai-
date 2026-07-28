@@ -25,6 +25,7 @@ export function createPracticeRouter(
     validate(startSessionSchema),
     controller.start,
   );
+  router.get('/sessions', requireAuth, requireRole('student'), controller.listMine);
   router.get('/sessions/current', requireAuth, requireRole('student'), controller.getCurrent);
   router.get(
     '/sessions/:sessionId',

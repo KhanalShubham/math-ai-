@@ -15,6 +15,7 @@ export function createDiagnosticRouter(
   const controller = createDiagnosticController(diagnosticService, studentService);
 
   router.post('/attempts', requireAuth, requireRole('student'), controller.start);
+  router.get('/attempts', requireAuth, requireRole('student'), controller.listMine);
   router.get('/attempts/current', requireAuth, requireRole('student'), controller.getCurrent);
   router.get(
     '/attempts/:attemptId',

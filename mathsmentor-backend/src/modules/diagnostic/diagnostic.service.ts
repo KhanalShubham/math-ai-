@@ -58,6 +58,7 @@ export interface SubmitItemResult {
 export interface DiagnosticService {
   startAttempt(studentId: string, examBoard: string, tier: TopicTier): Promise<StartAttemptResult>;
   getCurrentAttempt(studentId: string): Promise<DiagnosticAttempt | null>;
+  listAttempts(studentId: string): Promise<DiagnosticAttempt[]>;
   getAttempt(id: string, studentId: string): Promise<DiagnosticAttempt>;
   submitItem(
     attemptId: string,
@@ -177,6 +178,10 @@ export function createDiagnosticService(deps: DiagnosticServiceDeps): Diagnostic
 
     async getCurrentAttempt(studentId) {
       return deps.diagnosticRepository.findInProgressForStudent(studentId);
+    },
+
+    async listAttempts(studentId) {
+      return deps.diagnosticRepository.findByStudent(studentId);
     },
 
     async getAttempt(id, studentId) {
