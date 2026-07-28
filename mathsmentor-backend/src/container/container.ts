@@ -6,7 +6,9 @@ import { logger } from '../infrastructure/logging/logger';
 import { MongoUserRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-user.repository';
 import { MongoRefreshTokenRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-refresh-token.repository';
 import { MongoVerificationTokenRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-verification-token.repository';
+import { MongoStudentRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-student.repository';
 import { createAuthService, type AuthService } from '../modules/auth/auth.service';
+import { createStudentService, type StudentService } from '../modules/student/student.service';
 
 /**
  * Manual composition root (ARCHITECTURE.md §13). No DI framework — the object
@@ -23,6 +25,7 @@ export interface Container {
   eventBus: EventBus;
   jobQueue: JobQueue;
   authService: AuthService;
+  studentService: StudentService;
 }
 
 export function createContainer(): Container {
@@ -39,10 +42,14 @@ export function createContainer(): Container {
     eventBus,
   });
 
+  const studentRepository = new MongoStudentRepository();
+  const studentService = createStudentService({ studentRepository, eventBus });
+
   return {
     logger,
     eventBus,
     jobQueue,
     authService,
+    studentService,
   };
 }
