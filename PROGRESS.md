@@ -8,18 +8,80 @@ state is visible without re-scanning the codebase. Newest entry on top.
 | | |
 |---|---|
 | **Current Version** | v0.3.0 |
+| **Architecture Version** | v1 (Frozen — see `ARCHITECTURE.md`) |
 | **Current Branch** | main |
-| **Latest Commit** | `c027d58` |
+| **Latest Commit** | `4ee5b82` |
+| **Backend Modules Complete** | 3 / 10 |
+| **Overall Progress** | ~30% |
 | **Test Status** | 86/86 passing (10 suites) |
 | **TypeScript** | clean |
 | **ESLint** | clean |
 | **Active Milestone** | Diagnostic module |
-| **Next Immediate Task** | DiagnosticAttempt repository (interface + Mongoose model/repo) — see DOMAIN_MODEL.md §2.7 |
+
+**Next Commit Goal**
+Implement `DiagnosticAttempt` repository (DOMAIN_MODEL.md §2.7):
+- `diagnostic.repository.interface.ts`
+- Mongoose model + repository
+- `curriculum.service`-style unit tests (fake repo)
+
+**Project Health**
+- ✅ Build passing
+- ✅ Tests passing
+- ✅ Lint clean
+- ✅ Types clean
+- ⚠️ OpenAPI incomplete (Student/Curriculum undocumented)
+- ⚠️ Deployment/observability not yet started
+
+**Repository Metrics**
+| | |
+|---|---|
+| Commits | 8 |
+| Tests | 86 |
+| Suites | 10 |
+| Coverage | not measured yet |
+| Build | Passing |
+
+**Module Completion**
+
+| Module | Status |
+|---|---|
+| Auth | ✅ Complete (frozen) |
+| Student | ✅ Complete (frozen) |
+| Curriculum | ✅ Complete (frozen) |
+| Diagnostic | 🚧 In Progress |
+| Practice | ⏳ Planned |
+| Teacher | ⏳ Planned |
+| Parent | ⏳ Planned |
+| Notification | ⏳ Planned |
+| Analytics | ⏳ Planned |
+| AI | ⏳ Planned |
+
+**Backend Roadmap**
+```
+✅ Foundation
+✅ Authentication
+✅ Student
+✅ Curriculum
+🚧 Diagnostic
+⬜ Practice
+⬜ Teacher
+⬜ Parent
+⬜ Analytics
+⬜ Notification
+⬜ AI
+⬜ Deployment
+```
 
 **Decisions Frozen** (do not reopen absent a bug or genuine architectural issue):
 - Authentication
 - Student module
 - Curriculum module
+
+**Known Risks**
+- Diagnostic's grading/scoring logic will shape Practice's design (same `domain/grading` strategies, same "compute once, never recompute" rule) — get Diagnostic right before starting Practice.
+- The AI module (`hint`, `tutor`, `recommendation`, `study-plan`) depends on `DiagnosticCompleted`/`MasteryRecord` events existing first — it cannot be usefully started before Diagnostic and the mastery read model.
+- `EventBus` is in-process/in-memory only — a process restart drops any in-flight event; fine for day-one, but the event log is not yet durable (ARCHITECTURE.md §21.1 flags this as a deliberate, revisitable choice, not an oversight).
+- AI must never receive `answerKey` or ungraded student answers directly — enforced today by `toPublicQuestion`/`select:false`; every new module touching `Question`/grading must preserve this boundary.
 
 **Tech Debt**
 - `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student and Curriculum endpoints aren't documented there yet.
