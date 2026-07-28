@@ -529,6 +529,16 @@ Both are explicitly **out of scope for backend scaffolding and every module phas
 
 ---
 
+## 23. Frontend (test harness, not product UI)
+
+`mathsmentor-frontend/` (Vite + React + TypeScript, `react-router-dom` for the handful of routes) exists for exactly one purpose: prove the backend works end-to-end from a real browser — login, diagnostic, practice, teacher roster, parent view, notifications inbox. It is explicitly **not** an attempt at the product UI: no design system, minimal/no styling, no attempt at UX polish. See `mathsmentor-frontend/README.md` for setup and PROGRESS.md's Phase 1 → frontend-harness → Phase 2 roadmap for why this exists as a gate before AI work begins, not as product scaffolding.
+
+Deliberate simplifications, all documented in the frontend README: access tokens stored in `localStorage` (not httpOnly-cookie or in-memory, which a real product frontend should use), no refresh-token flow (re-login on the 15-minute access-token expiry), and `studentAnswer` always rendered as a plain text field regardless of question type (the domain model has no separate "MCQ options" field to render — see DOMAIN_MODEL.md §2.6's `AnswerKey` shape).
+
+A small dev-only script, `mathsmentor-backend/scripts/mint-admin-token.ts` (`npm run mint-admin-token`), prints a short-lived admin JWT to stdout so a local developer can bootstrap the one `School` record the harness needs (Schools remain admin-provisioned per AD-009 — this script grants nothing a backend developer couldn't already do with the same local `JWT_ACCESS_SECRET`, it just saves hand-writing a JWT).
+
+---
+
 ## Challenges to the brief, as requested
 
 A few things worth pushing back on or flagging before code gets written:

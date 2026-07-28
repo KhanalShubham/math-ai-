@@ -50,31 +50,32 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 | | |
 |---|---|
-| **Current Version** | v0.10.0 |
+| **Current Version** | v0.11.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `ca1879a` |
+| **Latest Commit** | `<pending>` |
 | **Backend Modules Complete** | 9 / 10 (+ MasteryRecord read model) |
-| **Overall Progress** | ~90% |
-| **Test Status** | 215/215 passing (25 suites) |
-| **TypeScript** | clean |
-| **ESLint** | clean |
+| **Frontend** | Test harness built (`mathsmentor-frontend/`) — not the product UI, see AD-015 |
+| **Overall Progress** | ~90% backend · Phase 1 product loop proven end-to-end |
+| **Test Status** | 215/215 backend passing (25 suites) — frontend has no automated tests (thin harness, manually driven end-to-end, see 2026-07-28 entry) |
+| **TypeScript** | clean (backend + frontend) |
+| **ESLint** | clean (backend); frontend oxlint clean (1 pre-existing fast-refresh warning) |
 
 **Milestone Progress**
 ```
-███████████████████████████░░ 90%
+███████████████████████████░░ 90% (backend) — Phase 1 gate cleared
 ```
 
 **Active Milestone**
-None — Notification complete; awaiting direction for AI (see stop condition below)
+None — Phase 1 (Teacher/Parent/Analytics/Notification + frontend harness + e2e proof) complete; awaiting direction to begin Phase 2 (AI) — see stop condition below
 
 **Current Focus**
-Analytics → Notification (both complete; AI is the only planned backend module left)
+Notification → frontend test harness (both complete; Phase 2 — AI Foundation — is next, not yet started)
 
 **Blocked By**
 None
 
 **Next Architectural Decision**
-Reconciliation strategy for `ClassGroup.activeStudentIds` ↔ `StudentProfile.classIds` drift on partial AD-011 write failure (mirrors the same open gap on the parent-link contract)
+Phase 2 AI Foundation: the `AIProvider` abstraction (OpenAI/Claude/Gemini/Ollama implementations) plus `PromptBuilder`/`ConversationContext`/`TokenCounter`/`AIResponse`/`RateLimiter`/`SafetyGuard` — foundation only, no AI feature yet, per the user's explicit phase-gate instruction (see the Phase 2 Roadmap section below)
 
 **Current Task**
 None in progress. Per explicit instruction, do not begin AI, Deployment, CI/CD, or OpenAPI work until requested.
@@ -178,6 +179,31 @@ No load-testing tooling is wired up yet — these are targets to design against,
 ⬜ Deployment
 ```
 
+**Phase 2 Roadmap** (AD-015 — gates AI behind a working product loop, not just green backend tests)
+```
+Phase 1 (done)
+---------------
+✅ Teacher
+✅ Parent
+✅ Analytics
+✅ Notification
+    ↓
+✅ Frontend integration (mathsmentor-frontend/ — thin test harness, not product UI)
+    ↓
+✅ End-to-end functionality proven (2026-07-28 — real browser: register → diagnostic/
+   practice → mastery milestone → notification, teacher roster, parent link, all real)
+
+Phase 2 (not started — awaiting explicit go-ahead)
+----------------------------------------------------
+⬜ AI Foundation   — AIProvider abstraction only (OpenAI/Claude/Gemini/Ollama), plus
+                     PromptBuilder/ConversationContext/TokenCounter/AIResponse/
+                     RateLimiter/SafetyGuard. NO feature implementation in this pass.
+⬜ AI Features     — one user-visible capability per milestone, in this order:
+                     explain-my-mistake → hint → recommend-next-topic → study-plan →
+                     tutor-chat (chat is last on purpose, not first)
+⬜ AI Optimization — after features exist and are used, not before
+```
+
 **Module Dependency Graph**
 ```
 Foundation
@@ -230,6 +256,8 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - `MasteryMilestoneReached` (AD-014) fires every time a topic's score crosses the 0.8 threshold upward, not just the first time ever — a score that dips below and later re-crosses fires again. Documented simplification (a true once-ever achievement needs persisted state this module doesn't track today), not a bug.
 - Notification only wires up `mastery_milestone` of the four `NotificationType`s DOMAIN_MODEL.md §2.12 defines. `streak_reminder` has no streak concept anywhere in the codebase; `weekly_report` needs a scheduled/cron job runner (`JobQueue` only supports enqueue-and-run-once, no recurring schedule); `assignment_due` needs a due date on `PracticeSession`, which doesn't exist (`teacher_assigned` practice creation is itself still unbuilt — see Practice's existing tech debt). All three are real gaps, not silent oversights.
 - Notification doesn't yet notify a student's linked parents when the student hits a mastery milestone — a natural extension once real product demand exists, deliberately not built now to avoid scope creep (would need per-parent `notificationPreferences` handling).
+- The frontend test harness stores its access token in `localStorage` and has no refresh-token flow (AD-015) — acceptable for a local-only harness against a dev backend, never acceptable for the real product frontend when that's eventually built.
+- `npm run mint-admin-token` (backend) is a genuine, if narrow, way to obtain an admin JWT locally — it requires the same `JWT_ACCESS_SECRET` a developer already has in their local `.env`, so it grants nothing new, but it's still worth knowing this script exists if reasoning about the local dev environment's trust boundary.
 
 **Tech Debt**
 - `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, Practice, Mastery, Teacher, Parent, Analytics, and Notification endpoints aren't documented there yet.
@@ -243,6 +271,8 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - `DiagnosticCompleted` and `PracticeItemSubmitted` don't carry their own attempt/session id in their event payload, so analytics' projected `AnalyticsEvent.aggregateId` for those two event types points at the student/question instead of the actual attempt/session document — documented in `analytics.service.ts`, not a data-loss bug (the source records are still fully queryable through `diagnostic`/`practice` directly).
 - Notification's `streak_reminder`, `weekly_report`, and `assignment_due` types are unwired (see Known Risks) — each is blocked on infrastructure or product data that doesn't exist yet, tracked here rather than silently dropped.
 - No email delivery exists for Notification — `deliveredVia` is always `['in_app']` today; DOMAIN_MODEL.md's `'email'` channel option is modeled but unimplemented, same "Phase 9 log-line" placeholder status as auth's verification/password-reset emails (`auth.service.ts`).
+- `mathsmentor-frontend` has no automated test suite (unit or e2e) — it was verified once, manually, end-to-end via a throwaway Playwright script (not committed) against a real running backend (2026-07-28 entry below). If the harness grows or the AI phase adds new screens, revisit whether that's still an acceptable verification method or whether a committed e2e suite is warranted.
+- The frontend harness has no UI for creating a `School` (by design — see README) — a teacher can't self-serve a school, and there's no in-app path around `npm run mint-admin-token` + a manual curl call. Fine for a local dev harness, would need a real onboarding flow for any actual product.
 
 ---
 
@@ -345,6 +375,20 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 
 **Status:** Frozen · **Introduced:** v0.10.0 · **Last reviewed:** v0.10.0
 
+### AD-015 — AI is gated behind a frontend test harness and a proven end-to-end product loop; Phase 2 splits into Foundation → Features → Optimization
+
+**Decision:** Before any AI module work begins, build a thin, unstyled frontend test harness (`mathsmentor-frontend/`, Vite + React + TypeScript) that exercises the real backend end-to-end — login, diagnostic, practice, teacher roster, parent view, notifications inbox — and manually verify the full loop works in a real browser against the real backend. Only once that's proven does Phase 2 (AI) begin, and Phase 2 itself is split into **AI Foundation** (an `AIProvider` abstraction — OpenAI/Claude/Gemini/Ollama implementations — plus `PromptBuilder`, `ConversationContext`, `TokenCounter`, `AIResponse`, `RateLimiter`, `SafetyGuard` — foundation only, no feature) → **AI Features** (one user-visible capability per milestone: explain-my-mistake, hint, recommend-next-topic, study-plan, tutor-chat — in that order, chat deliberately last) → **AI Optimization**.
+
+**Why:** the user's explicit direction (2026-07-28) was to stop before starting AI immediately after Notification completed, even with every test green. AD-003 already establishes "AI never grades" — meaning AI's entire job is to enhance an already-working learning loop, not to be the thing that makes the product function. Building AI before the rest of the product demonstrably works end-to-end (not just passes backend integration tests, but actually renders and responds in a browser) risks building the enhancement layer before there's a proven base to enhance. Splitting Phase 2 into Foundation → Features → Optimization mirrors the same "decide the frozen boundary once, iterate freely behind it" pattern already used for `EventBus` (AD-006) and every repository interface in this codebase — locking in the provider abstraction before committing to any specific prompt design or feature avoids provider lock-in and expensive rework.
+
+**Alternatives considered:**
+1. *Go straight from Notification to AI feature work.* Rejected — explicit user instruction; also the pattern this codebase has consistently avoided (invent infrastructure/abstractions before there's a proven, concrete need — see AD's for AnalyticsEvent retention, the deferred `PromptTemplate`/`FeatureFlag` items in ARCHITECTURE.md §22).
+2. *Build the real, polished product frontend now instead of a thin harness.* Rejected (explicit user choice) — bigger scope, slower to reach the "review the product flow" checkpoint the phase gate exists for, and premature before AI's UI needs are even known (AI features will likely need their own frontend surfaces the harness doesn't yet anticipate).
+3. *Skip the frontend entirely and "review the flow" by re-reading backend integration tests.* Rejected — the whole point of this gate is proving the product works from a real user's vantage point (a browser), not re-confirming what the test suite already asserts about the API contract.
+4. *Build all AI features in one pass instead of Foundation → Features → Optimization.* Rejected — committing to a provider/prompt design and five feature implementations simultaneously removes the option to course-correct after the first feature ships; the explicit user framing was "feature-driven, not service-driven," one milestone at a time.
+
+**Status:** Frozen (the phase-gate + split itself; the harness's own internals are explicitly not frozen — iterate on it freely) · **Introduced:** v0.11.0 · **Last reviewed:** v0.11.0
+
 ---
 
 ## Releases
@@ -362,6 +406,32 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 | v0.9.0 | Analytics module (`AnalyticsEvent`, AD-012) | `f969f11` |
 | v0.9.1 | `AnalyticsEvent` retention policy — 18-month TTL delete (AD-013) | `0448e25` |
 | v0.10.0 | Notification module (`Notification`, `mastery_milestone` end-to-end, AD-014) | `ca1879a` |
+| v0.11.0 | Frontend test harness (`mathsmentor-frontend/`) + Phase 2 AI gate (AD-015) | `<pending>` |
+
+---
+
+## 2026-07-28 — Frontend test harness built; Phase 1 end-to-end loop proven
+
+**Status:** TypeScript ✅ (backend + frontend) · ESLint ✅ (backend) · oxlint ✅ (frontend, 1 pre-existing warning) · backend Tests ✅ (215/215, 25 suites, unchanged) · frontend has no automated tests (see Tech Debt) · commit `<pending>`
+
+**Completed**
+- `mathsmentor-frontend/` (Vite + React + TypeScript, `react-router-dom`) — a thin, deliberately unstyled test harness, not the product UI. Pages: login/register, student dashboard (profile creation, mastery table, full diagnostic loop, full practice loop), teacher dashboard (profile creation, class creation, roster + enroll/withdraw + membership history), parent dashboard (profile creation, link/unlink child by email, children table, notification-preference toggles), a shared layout with a polling notifications bell (unread badge, mark-read, mark-all-read).
+- **AD-015** (new) — the phase-gate decision itself: frontend harness + manual end-to-end browser verification required before any AI module work begins; Phase 2 (AI) split into Foundation → Features → Optimization.
+- `mathsmentor-backend/scripts/mint-admin-token.ts` (`npm run mint-admin-token`) — a small dev-only script printing a short-lived admin JWT, needed because the harness's Teacher dashboard requires a `School` to exist and Schools remain admin-provisioned by design (AD-009); documented as a bootstrap convenience, not a new admin-registration path.
+- **Manually verified end-to-end in a real headless browser** (Playwright, throwaway script, not committed — see Tech Debt) against the real backend (real Mongo via the local MongoDB service, no Redis running — rate limiting fails open by design when Redis is unreachable, confirmed harmless for this check): student registers → creates profile → submits a correct practice answer → a real `mastery_milestone` notification appears in the bell within one poll cycle and can be marked read; the full diagnostic loop (start → answer → next question → complete, ending in a real `finalGradeEstimate`) also verified; teacher registers → creates profile against a bootstrapped School → creates a class → enrolls the student by ID → roster and membership history render correctly; parent registers → creates profile → links the student by email → sees the child's data → toggles notification preferences. All against the actual, real HTTP API — not mocked.
+- Found and fixed one real bug during this verification: `NotificationsBell` fetched notifications once on mount and never again, so a notification created later in the same session (exactly the mastery-milestone case) never appeared without a full page reload. Fixed with a 5-second poll plus a refetch on every dropdown open.
+
+**Architecture decisions**
+- AD-015 (see Architecture Decisions Log) — frontend-harness-then-AI phase gate, Phase 2 Foundation/Features/Optimization split.
+
+**Known technical debt**
+- No automated frontend test suite (unit or e2e) — verified once, manually, via a throwaway Playwright script. Revisit if the harness grows or the AI phase adds screens.
+- Frontend access tokens live in `localStorage`, no refresh-token flow — deliberate harness simplification, never acceptable for a real product frontend.
+- No in-app way to bootstrap a `School` — by design (Schools are admin-provisioned, AD-009); requires `npm run mint-admin-token` + a manual curl call, documented in the frontend README.
+- A logout click occasionally shows an aborted `/auth/logout` request in the browser console — cosmetic, no functional impact since the harness never uses the refresh-token cookie that request would otherwise clear.
+
+**Next milestone**
+Phase 2 — AI Foundation (the `AIProvider`/`PromptBuilder`/`ConversationContext`/`TokenCounter`/`AIResponse`/`RateLimiter`/`SafetyGuard` abstraction layer only, no feature implementation) — not started, awaiting explicit direction per AD-015's phase gate.
 
 ---
 
