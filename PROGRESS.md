@@ -7,38 +7,38 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 | | |
 |---|---|
-| **Current Version** | v0.4.0 |
+| **Current Version** | v0.5.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `1f73876` |
-| **Backend Modules Complete** | 4 / 10 |
-| **Overall Progress** | ~40% |
-| **Test Status** | 111/111 passing (13 suites) |
+| **Latest Commit** | `78cc9c0` |
+| **Backend Modules Complete** | 5 / 10 |
+| **Overall Progress** | ~50% |
+| **Test Status** | 133/133 passing (15 suites) |
 | **TypeScript** | clean |
 | **ESLint** | clean |
 
 **Milestone Progress**
 ```
-████████████░░░░░░░░░░░░░░░░░░ 40%
+███████████████░░░░░░░░░░░░░░░ 50%
 ```
 
 **Active Milestone**
-Practice module
+MasteryRecord (student-owned read model, DOMAIN_MODEL.md §2.9)
 
 **Current Task**
-Read DOMAIN_MODEL.md §2.8 (`PracticeSession`) and design `practice.repository.interface.ts`
+Design `mastery.repository.interface.ts` (`findByStudent`, `findByStudentAndTopic`, `upsertFromAttempt` — the ONLY write path) and its Mongoose model, owned by the `student` module
 
 **Next Task**
-Practice service (reuses `domain/grading.evaluateAnswer`, same "compute once, never recompute" rule as Diagnostic; publishes `PracticeAttemptSubmitted`)
+Event handlers: `mastery.onPracticeItemSubmitted` (subscribes to `PracticeItemSubmitted`) and `mastery.onDiagnosticCompleted` (subscribes to `DiagnosticCompleted`) — these are the only callers permitted to write `MasteryRecord`
 
 **Then**
-Mongoose model/repository → Zod validation → controller → routes → unit tests → integration tests → commit
+Read endpoints (student dashboard: `findByStudent`) → unit tests (event handler + repository) → integration tests → commit
 
 **Project Health**
 - ✅ Build passing
 - ✅ Tests passing
 - ✅ Lint clean
 - ✅ Types clean
-- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic undocumented)
+- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic/Practice undocumented)
 - ⚠️ Deployment/observability not yet started
 
 **Architecture Status**
@@ -49,35 +49,37 @@ Mongoose model/repository → Zod validation → controller → routes → unit 
 **Repository Metrics**
 | | |
 |---|---|
-| Commits | 10 |
-| Tests | 111 |
-| Suites | 13 |
+| Commits | 12 |
+| Tests | 133 |
+| Suites | 15 |
 | Coverage | not measured yet |
 | Build | Passing |
 
 **Codebase Size**
 | | |
 |---|---|
-| Source files (`src/`) | 79 |
-| Lines of code (`src/`) | ~3,740 |
-| Domain modules (`src/modules/`) | 10 (4 implemented, 6 scaffolded) |
-| API endpoints | 30 |
-| Test files | 14 |
+| Source files (`src/`) | 88 |
+| Lines of code (`src/`) | ~4,209 |
+| Domain modules (`src/modules/`) | 10 (5 implemented, 5 scaffolded) |
+| API endpoints | 35 |
+| Test files | 16 |
 
 **Module Completion**
 
 | Module | Status | Started | Completed |
 |---|---|---|---|
 | Auth | ✅ Complete (frozen) | 2026-07-28 or earlier | 2026-07-28 |
-| Student | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
+| Student | ✅ Complete (frozen)¹ | 2026-07-28 | 2026-07-28 |
 | Curriculum | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
 | Diagnostic | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
-| Practice | 🚧 In Progress | 2026-07-28 | — |
+| Practice | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
 | Teacher | ⏳ Planned | — | — |
 | Parent | ⏳ Planned | — | — |
 | Notification | ⏳ Planned | — | — |
 | Analytics | ⏳ Planned | — | — |
 | AI | ⏳ Planned | — | — |
+
+¹ `MasteryRecord`/`StudyPlan` (DOMAIN_MODEL.md §2.9–2.10) are owned by `student` but not yet built — "frozen" describes `StudentProfile` only; the module reopens narrowly for these two additions, not a full unfreeze.
 
 **Production Readiness**
 - ☐ OpenAPI complete
@@ -95,7 +97,8 @@ Mongoose model/repository → Zod validation → controller → routes → unit 
 ✅ Student
 ✅ Curriculum
 ✅ Diagnostic
-🚧 Practice
+✅ Practice
+🚧 MasteryRecord (student module addition)
 ⬜ Teacher
 ⬜ Parent
 ⬜ Analytics
@@ -106,21 +109,46 @@ Mongoose model/repository → Zod validation → controller → routes → unit 
 
 **Decisions Frozen** (do not reopen absent a bug or genuine architectural issue):
 - Authentication
-- Student module
+- Student module (`StudentProfile` only — see footnote above)
 - Curriculum module
 - Diagnostic module
+- Practice module
 
 **Known Risks**
-- Practice reuses the exact same `domain/grading` engine and "compute once, never recompute" rule as Diagnostic — any grading change must be validated against both modules' tests, not just one.
-- The AI module (`hint`, `tutor`, `recommendation`, `study-plan`) depends on `DiagnosticCompleted`/`MasteryRecord` events existing first — it cannot be usefully started before Practice and the mastery read model.
-- `EventBus` is in-process/in-memory only — a process restart drops any in-flight event; fine for day-one, but the event log is not yet durable (ARCHITECTURE.md §21.1 flags this as a deliberate, revisitable choice, not an oversight).
+- `MasteryRecord` is the first read model with a hard "only these event handlers may write it" rule (DOMAIN_MODEL.md §2.9) — nothing DB-enforces this, so it depends entirely on code-review discipline holding, same as the prerequisite-DAG cycle check.
+- The AI module (`hint`, `tutor`, `recommendation`, `study-plan`) depends on `MasteryRecord` existing first — it cannot be usefully started before this milestone.
+- `EventBus` is in-process/in-memory only — a process restart drops any in-flight event; fine for day-one, but the event log is not yet durable (ARCHITECTURE.md §21.1 flags this as a deliberate, revisitable choice, not an oversight). This matters more now that `MasteryRecord` depends on events actually being delivered.
 - AI must never receive `answerKey` or ungraded student answers directly — enforced today by `toPublicQuestion`/`select:false`; every new module touching `Question`/grading must preserve this boundary.
 - Diagnostic's next-question selection is a simplified heuristic (2 items/topic, difficulty ±1 on correct/incorrect), not a real IRT/adaptive-testing model — fine for a first working version, but the grade/theta mapping in `diagnostic.service.ts` (`mapThetaToGrade`) is a linear placeholder that will need real psychometric backing before this ships to real students.
 
 **Tech Debt**
-- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, and Diagnostic endpoints aren't documented there yet.
+- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, and Practice endpoints aren't documented there yet.
 - `domain/grading`'s algebraic grader is a normalized string match against `acceptedForms`, not true symbolic equivalence (e.g. "2x+4" vs "4+2x" would fail) — needs a CAS-backed check eventually.
 - `domain/grading`'s multi-step grader is a JSON deep-equality check per step — fine for primitive step answers, not a general structural-equivalence engine.
+
+---
+
+## 2026-07-28 — Practice module complete
+
+**Status:** TypeScript clean · ESLint clean · 133/133 tests passing (15 suites) · committed locally (`78cc9c0`, not yet pushed)
+
+**Completed this session**
+- **Practice module** — `PracticeSession` (DOMAIN_MODEL.md §2.8), structurally parallel to `DiagnosticAttempt` but without the adaptive ability trace/finalGradeEstimate/topicBreakdown (a plain practice session has none of those). Reuses `domain/grading.evaluateAnswer` directly and the same "compute once, never recompute" rule. Publishes `PracticeItemSubmitted` per item (fine-grained, unlike Diagnostic's once-at-completion event).
+- Two deliberate deviations from a literal DiagnosticRepository mirror, both documented in code: (1) starting a session does not reject on an existing in-progress one — practice is casual/frequent, `findInProgressForStudent` exists for "resume" reads, not a one-at-a-time constraint; (2) the student-facing route only accepts `source` in `{self_selected, ai_recommended}` — `teacher_assigned` requires `assignedByTeacherId` and has no creation path yet since no teacher module exists, but the type/schema already support it.
+- Removed the stale `src/modules/practice/README.md` scaffold placeholder.
+
+**Repo commits so far**
+```
+78cc9c0 Add Practice module (PracticeSession)
+1f73876 Add Diagnostic module and domain/grading correctness engine
+```
+(see the Diagnostic entry below for the full history before this point)
+
+**Scaffolded but NOT implemented yet** (README-only placeholders in `src/modules/`):
+`teacher`, `parent`, `notification`, `analytics`, `ai` (hint/ocr/prompt-builder/recommendation/study-plan/tutor). `MasteryRecord`/`StudyPlan` (owned by `student`, DOMAIN_MODEL.md §2.9–2.10) also remain unbuilt.
+
+**Recommended next milestone: MasteryRecord**
+An event-handler-write-only read model owned by `student` (DOMAIN_MODEL.md §2.9) — `mastery.onPracticeItemSubmitted`/`mastery.onDiagnosticCompleted` are the only permitted writers, enforced by code-review convention, not the database. This unblocks the AI module (`recommendation`, `study-plan`), which needs mastery data to exist before it has anything to reason about.
 
 ---
 
