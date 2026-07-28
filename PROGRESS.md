@@ -52,7 +52,7 @@ state is visible without re-scanning the codebase. Newest entry on top.
 |---|---|
 | **Current Version** | v0.12.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `<pending>` |
+| **Latest Commit** | `658a7ff` |
 | **Backend Modules Complete** | 9 / 10 (+ MasteryRecord read model) |
 | **Frontend** | Test harness built (`mathsmentor-frontend/`) — not the product UI, see AD-015 |
 | **Overall Progress** | ~90% backend · Phase 1 product loop proven end-to-end · Student Learning Dashboard complete |
@@ -434,7 +434,7 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 | v0.9.1 | `AnalyticsEvent` retention policy — 18-month TTL delete (AD-013) | `0448e25` |
 | v0.10.0 | Notification module (`Notification`, `mastery_milestone` end-to-end, AD-014) | `ca1879a` |
 | v0.11.0 | Frontend test harness (`mathsmentor-frontend/`) + Phase 2 AI gate (AD-015) | `b5c1c0f` |
-| v0.12.0 | Student Learning Dashboard: study streak (AD-016), learning history, strengths/weaknesses, recommended-topics placeholder (AD-017), resume-in-progress-practice | `<pending>` |
+| v0.12.0 | Student Learning Dashboard: study streak (AD-016), learning history, strengths/weaknesses, recommended-topics placeholder (AD-017), resume-in-progress-practice | `658a7ff` |
 
 ---
 
@@ -442,7 +442,7 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 
 **What a real user can now do that they couldn't before:** a student can see how many consecutive days they've studied (and their best-ever streak); see every past diagnostic attempt and practice session in one place, not just "current"; see which topics they're strong or weak at without doing mental math over the raw mastery table; get a concrete "study this next" suggestion instead of an empty dashboard; and reload the page mid-practice-session without losing their place.
 
-**Status:** TypeScript ✅ (backend + frontend) · ESLint ✅ (backend) · oxlint ✅ (frontend) · backend Tests ✅ (228/228, 25 suites, +13) · frontend manually verified end-to-end (see below) · commit `<pending>`
+**Status:** TypeScript ✅ (backend + frontend) · ESLint ✅ (backend) · oxlint ✅ (frontend) · backend Tests ✅ (228/228, 25 suites, +13) · frontend manually verified end-to-end (see below) · commit `658a7ff`
 
 **Completed**
 - **Study streak** (AD-016) — `StudentProfile` gains `currentStreakDays`/`longestStreakDays`/`lastActiveDate`, computed by a pure, directly-unit-tested function (`computeStreakUpdate`) and updated via two new `student.service` subscriptions to `PracticeItemSubmitted`/`DiagnosticCompleted`. Verified live in a browser: a real practice submission bumped the dashboard from "no streak" to "🔥 1-day streak."
