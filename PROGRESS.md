@@ -52,7 +52,7 @@ state is visible without re-scanning the codebase. Newest entry on top.
 |---|---|
 | **Current Version** | v0.9.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `<pending>` |
+| **Latest Commit** | `f969f11` |
 | **Backend Modules Complete** | 8 / 10 (+ MasteryRecord read model) |
 | **Overall Progress** | ~85% |
 | **Test Status** | 201/201 passing (23 suites) |
@@ -322,13 +322,13 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 | v0.6.0 | MasteryRecord read model | `21028be` |
 | v0.7.0 | Teacher module (`TeacherProfile`/`School`/`ClassGroup`, AD-011) | `22baf3a` |
 | v0.8.0 | Parent module (`ParentProfile`, link/unlink by email) | `6e91541` |
-| v0.9.0 | Analytics module (`AnalyticsEvent`, AD-012) | `<pending>` |
+| v0.9.0 | Analytics module (`AnalyticsEvent`, AD-012) | `f969f11` |
 
 ---
 
 ## 2026-07-28 — Analytics module complete
 
-**Status:** TypeScript ✅ · ESLint ✅ · Tests ✅ (201/201, 23 suites) · commit `<pending>`
+**Status:** TypeScript ✅ · ESLint ✅ · Tests ✅ (201/201, 23 suites) · commit `f969f11`
 
 **Completed**
 - `AnalyticsEvent` (DOMAIN_MODEL.md §2.13) — full repository interface → Mongoose model/repository → service → Zod validation → controller → routes → unit tests → integration tests.
