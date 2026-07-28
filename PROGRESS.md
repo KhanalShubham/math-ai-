@@ -5,6 +5,8 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 **Workflow for every milestone:** read this file → confirm the active milestone → read only the required architecture/domain sections → implement one complete module → run TypeScript + ESLint + unit tests + integration tests → commit → update this file → push → stop. No exceptions.
 
+**Keep this file in sync with every meaningful commit, not just milestone completions** — at minimum, the Quick Reference's commit hash/test counts should never lag behind `git log`. A full dated history entry (via the template below) is still reserved for milestone-sized units of work; a one-line Quick Reference bump is enough for smaller in-flight commits so the file is never stale if work stops unexpectedly.
+
 **Standard entry template** for each dated section below:
 ```
 ## YYYY-MM-DD — <Module> complete
@@ -106,11 +108,26 @@ Mongoose models/repositories → service → Zod validation → controller → r
 **Production Readiness**
 - ☐ OpenAPI complete
 - ☐ Docker production image
-- ☐ CI/CD
-- ☐ Monitoring
-- ☐ Logging (structured logging already in place via pino; alerting not yet)
-- ☐ Backups
-- ☐ Security review
+- ☐ CI/CD pipeline green
+- ☐ Monitoring and alerting
+- ☑ Structured logging (pino) — alerting on `isOperational: false` errors not yet wired
+- ☐ Rate limiting verified under load (middleware exists — `authRateLimiter`/`globalRateLimiter` — not load-tested)
+- ☐ Security headers verified (helmet is in place — not audited against a checklist like OWASP secure-headers)
+- ☐ Backup strategy defined
+- ☐ Backup restore tested
+- ☐ Disaster recovery plan
+- ☐ Health/readiness endpoints (exist — `/health`, `/ready` — not wired to any uptime monitor)
+- ☐ Full security review
+
+**Performance Targets**
+| Endpoint / operation | Target (p95) | Current |
+|---|---|---|
+| Authentication (login/refresh) | < 150 ms | Not measured |
+| Diagnostic attempt start | < 500 ms | Not measured |
+| Practice item submission | < 200 ms | Not measured |
+| General API (p95, all routes) | < 200 ms | Not measured |
+
+No load-testing tooling is wired up yet — these are targets to design against, not current measurements. Revisit once k6/autocannon (or similar) is added to the toolchain.
 
 **Backend Roadmap**
 ```
@@ -128,6 +145,32 @@ Mongoose models/repositories → service → Zod validation → controller → r
 ⬜ AI
 ⬜ Deployment
 ```
+
+**Module Dependency Graph**
+```
+Foundation
+    ↓
+Authentication
+    ↓
+Student ──────────────┐
+    ↓                  │
+Curriculum             │ (StudentProfile needed by
+    ↓                  │  every module below)
+Diagnostic             │
+    ↓                  │
+Practice               │
+    ↓                  │
+Mastery (student addn) │
+    ↓                  │
+Teacher ←──────────────┘
+    ↓
+Parent
+    ↓
+Analytics
+    ↓
+AI
+```
+Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnostic/Practice must precede Mastery (it projects their events). Mastery should precede AI (`recommendation`/`study-plan` need real mastery data to reason over, not just events to subscribe to).
 
 **Decisions Frozen** (do not reopen absent a bug or genuine architectural issue):
 - Authentication
@@ -158,43 +201,43 @@ Permanent record of major design decisions — the "why," not just the "what." A
 
 ### AD-001 — Repositories are behavior-oriented, not CRUD
 `updateEstimatedGrade(studentId, grade)`, not a generic `update(student)`. Prevents accidental writes to fields with special rules (e.g. `currentEstimatedGrade`, `answerKey`) by construction, not by convention alone.
-**Status:** Frozen
+**Status:** Frozen · **Introduced:** v0.1.0 · **Last reviewed:** v0.6.0
 
 ### AD-002 — One module owns one collection
 Every collection has exactly one owning module's repository as its only sanctioned write path. Other modules read only through that module's *service*, never a second repository over the same collection.
-**Status:** Frozen
+**Status:** Frozen · **Introduced:** v0.1.0 · **Last reviewed:** v0.6.0
 
 ### AD-003 — AI never grades
 `domain/grading` has no import path to `infrastructure/ai` at all — not a policy, a structural fact about the codebase. Correctness is deterministic and auditable; AI is enrichment (hints, explanations), never the source of truth for whether an answer is right.
-**Status:** Frozen
+**Status:** Frozen · **Introduced:** v0.4.0 · **Last reviewed:** v0.6.0
 
 ### AD-004 — `Question.answerKey` never leaves the repository boundary
 Stripped by a dedicated `toPublicQuestion` mapper (and backed by `select: false` at the schema level) everywhere except the one admin-only internal read path. Enforced by tests, not by trusting every controller to remember to omit it.
-**Status:** Frozen
+**Status:** Frozen · **Introduced:** v0.3.0 · **Last reviewed:** v0.6.0
 
 ### AD-005 — Constraints MongoDB can't express are enforced in the service layer, explicitly
 Topic prerequisite-graph acyclicity (BFS cycle check in `curriculum.service.addPrerequisite`) and MasteryRecord's single-writer rule (`upsertFromAttempt` called only from its two event handlers) both depend on code-review discipline, not a database constraint. This is tracked as a standing risk in Known Risks, not silently assumed safe.
-**Status:** Frozen
+**Status:** Frozen · **Introduced:** v0.3.0 · **Last reviewed:** v0.6.0
 
 ### AD-006 — Domain events are in-process, swappable later
 `EventBus` is an interface; `InProcessEventBus` is the day-one implementation. A durable/outbox-backed implementation can replace it later without touching a single publisher or subscriber call site.
-**Status:** Frozen (implementation may change; the interface boundary may not)
+**Status:** Frozen (implementation may change; the interface boundary may not) · **Introduced:** v0.1.0 · **Last reviewed:** v0.6.0
 
 ### AD-007 — `isCorrect` is computed once, never recomputed
 Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect` at submission time via `domain/grading`. A later correction to a question's `answerKey` must never retroactively rewrite a student's historical result — historical attempts are immutable records of what happened.
-**Status:** Frozen
+**Status:** Frozen · **Introduced:** v0.4.0 · **Last reviewed:** v0.5.0
 
 ### AD-008 — Manual composition root, no DI framework
 `container.ts` wires every concrete repository/service by hand. The object graph is shallow enough that explicit wiring is more readable and debuggable than decorator-based injection.
-**Status:** Frozen
+**Status:** Frozen · **Introduced:** v0.1.0 · **Last reviewed:** v0.6.0
 
 ### AD-009 — Admin accounts are provisioned out-of-band
 `role: 'admin'` is not reachable via `/auth/register` — self-registration only allows `student`/`teacher`/`parent`. Integration tests mint admin JWTs directly (`signAccessToken`) rather than going through a registration flow that intentionally doesn't exist.
-**Status:** Frozen
+**Status:** Frozen · **Introduced:** v0.1.0 · **Last reviewed:** v0.3.0
 
 ### AD-010 — Verification and refresh tokens are dedicated collections, not fields on `User`
 `VerificationToken` (email verification + password reset, one active token per user/type) and `RefreshToken` (rotation, theft detection) each got their own collection instead of accumulating token fields on `User` — the same pattern extends cleanly to future flows (magic links, invitations) without touching `User`'s schema again.
-**Status:** Frozen
+**Status:** Frozen · **Introduced:** v0.1.0 · **Last reviewed:** v0.1.0
 
 ---
 
