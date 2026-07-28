@@ -3,6 +3,7 @@ import { validate } from '../../middleware/validate.middleware';
 import { requireAuth, requireRole } from '../auth/auth.middleware';
 import { createStudentController } from './student.controller';
 import type { StudentService } from './student.service';
+import type { MasteryService } from './mastery.service';
 import {
   classIdParamSchema,
   createStudentProfileSchema,
@@ -10,9 +11,12 @@ import {
   updateStudentProfileSchema,
 } from './student.validation';
 
-export function createStudentRouter(studentService: StudentService): Router {
+export function createStudentRouter(
+  studentService: StudentService,
+  masteryService: MasteryService,
+): Router {
   const router = Router();
-  const controller = createStudentController(studentService);
+  const controller = createStudentController(studentService, masteryService);
 
   router.post(
     '/profile',
@@ -44,6 +48,8 @@ export function createStudentRouter(studentService: StudentService): Router {
     validate(parentIdParamSchema, 'params'),
     controller.listByParent,
   );
+
+  router.get('/mastery', requireAuth, requireRole('student'), controller.getMyMastery);
 
   return router;
 }

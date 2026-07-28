@@ -11,7 +11,10 @@ export function createV1Router(container: Container): Router {
   const router = Router();
 
   router.use('/auth', createAuthRouter(container.authService));
-  router.use('/students', createStudentRouter(container.studentService));
+  router.use(
+    '/students',
+    createStudentRouter(container.studentService, container.masteryService),
+  );
   router.use(
     '/curriculum',
     createCurriculumRouter(container.topicService, container.questionService),

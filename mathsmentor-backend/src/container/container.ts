@@ -11,8 +11,10 @@ import { MongoTopicRepository } from '../infrastructure/persistence/mongoose/rep
 import { MongoQuestionRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-question.repository';
 import { MongoDiagnosticRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-diagnostic.repository';
 import { MongoPracticeRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-practice.repository';
+import { MongoMasteryRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-mastery.repository';
 import { createAuthService, type AuthService } from '../modules/auth/auth.service';
 import { createStudentService, type StudentService } from '../modules/student/student.service';
+import { createMasteryService, type MasteryService } from '../modules/student/mastery.service';
 import {
   createQuestionService,
   createTopicService,
@@ -45,6 +47,7 @@ export interface Container {
   questionService: QuestionService;
   diagnosticService: DiagnosticService;
   practiceService: PracticeService;
+  masteryService: MasteryService;
 }
 
 export function createContainer(): Container {
@@ -63,6 +66,9 @@ export function createContainer(): Container {
 
   const studentRepository = new MongoStudentRepository();
   const studentService = createStudentService({ studentRepository, eventBus });
+
+  const masteryRepository = new MongoMasteryRepository();
+  const masteryService = createMasteryService({ masteryRepository, eventBus });
 
   const topicRepository = new MongoTopicRepository();
   const questionRepository = new MongoQuestionRepository();
@@ -90,5 +96,6 @@ export function createContainer(): Container {
     questionService,
     diagnosticService,
     practiceService,
+    masteryService,
   };
 }

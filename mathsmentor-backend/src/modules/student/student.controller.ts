@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { AuthorizationError } from '../../errors';
 import { asyncHandler } from '../../middleware/error-handler.middleware';
 import type { StudentService } from './student.service';
+import type { MasteryService } from './mastery.service';
 import type {
   ClassIdParam,
   CreateStudentProfileInput,
@@ -23,7 +24,10 @@ function toPublicProfile(profile: StudentProfile) {
   };
 }
 
-export function createStudentController(studentService: StudentService) {
+export function createStudentController(
+  studentService: StudentService,
+  masteryService: MasteryService,
+) {
   return {
     createMyProfile: asyncHandler(async (req: Request, res: Response) => {
       const input = req.body as CreateStudentProfileInput;
@@ -56,6 +60,12 @@ export function createStudentController(studentService: StudentService) {
       }
       const students = await studentService.getByParentId(parentId);
       res.status(200).json({ students: students.map(toPublicProfile) });
+    }),
+
+    getMyMastery: asyncHandler(async (req: Request, res: Response) => {
+      const profile = await studentService.getByUserId(req.user!.sub);
+      const mastery = await masteryService.getByStudent(profile.id);
+      res.status(200).json({ mastery });
     }),
   };
 }
