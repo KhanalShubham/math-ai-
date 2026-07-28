@@ -50,25 +50,25 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 | | |
 |---|---|
-| **Current Version** | v0.8.0 |
+| **Current Version** | v0.9.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `6e91541` |
-| **Backend Modules Complete** | 7 / 10 (+ MasteryRecord read model) |
-| **Overall Progress** | ~75% |
-| **Test Status** | 184/184 passing (21 suites) |
+| **Latest Commit** | `<pending>` |
+| **Backend Modules Complete** | 8 / 10 (+ MasteryRecord read model) |
+| **Overall Progress** | ~85% |
+| **Test Status** | 201/201 passing (23 suites) |
 | **TypeScript** | clean |
 | **ESLint** | clean |
 
 **Milestone Progress**
 ```
-██████████████████████░░░░░░░ 75%
+█████████████████████████░░░░ 85%
 ```
 
 **Active Milestone**
-None — Teacher and Parent both complete; awaiting direction for Analytics, Notification, or AI (see stop condition below)
+None — Analytics complete; awaiting direction for Notification or AI (see stop condition below)
 
 **Current Focus**
-Teacher → Parent (both complete; next module not yet chosen)
+Parent → Analytics (both complete; next module not yet chosen)
 
 **Blocked By**
 None
@@ -77,7 +77,7 @@ None
 Reconciliation strategy for `ClassGroup.activeStudentIds` ↔ `StudentProfile.classIds` drift on partial AD-011 write failure (mirrors the same open gap on the parent-link contract)
 
 **Current Task**
-None in progress. Per explicit instruction, do not begin Notification, Analytics, AI, Deployment, CI/CD, or OpenAPI work until requested.
+None in progress. Per explicit instruction, do not begin Notification, AI, Deployment, CI/CD, or OpenAPI work until requested.
 
 **Next Task**
 —
@@ -90,7 +90,7 @@ None in progress. Per explicit instruction, do not begin Notification, Analytics
 - ✅ Tests passing
 - ✅ Lint clean
 - ✅ Types clean
-- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic/Practice/Mastery/Teacher/Parent undocumented)
+- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic/Practice/Mastery/Teacher/Parent/Analytics undocumented)
 - ⚠️ Deployment/observability not yet started
 
 **Architecture Status**
@@ -101,20 +101,20 @@ None in progress. Per explicit instruction, do not begin Notification, Analytics
 **Repository Metrics**
 | | |
 |---|---|
-| Commits | 16 |
-| Tests | 184 |
-| Suites | 21 |
+| Commits | 18 |
+| Tests | 201 |
+| Suites | 23 |
 | Coverage | not measured yet |
 | Build | Passing |
 
 **Codebase Size**
 | | |
 |---|---|
-| Source files (`src/`) | 115 |
-| Lines of code (`src/`) | ~5,807 |
-| Domain modules (`src/modules/`) | 10 (7 implemented, 3 scaffolded) |
-| API endpoints | 53 |
-| Test files | 22 |
+| Source files (`src/`) | 123 |
+| Lines of code (`src/`) | ~6,272 |
+| Domain modules (`src/modules/`) | 10 (8 implemented, 2 scaffolded) |
+| API endpoints | 55 |
+| Test files | 24 |
 
 **Module Completion**
 
@@ -128,12 +128,13 @@ None in progress. Per explicit instruction, do not begin Notification, Analytics
 | MasteryRecord (student addition) | ✅ Complete | 2026-07-28 | 2026-07-28 |
 | Teacher | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
 | Parent | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
+| Analytics | ✅ Complete (frozen)³ | 2026-07-28 | 2026-07-28 |
 | Notification | ⏳ Planned | — | — |
-| Analytics | ⏳ Planned | — | — |
 | AI | ⏳ Planned | — | — |
 
 ¹ `StudyPlan` (DOMAIN_MODEL.md §2.10) is still owned by `student` but not yet built — "frozen" describes `StudentProfile` + `MasteryRecord` + the narrow `addClassLink`/`removeClassLink`/`removeParentLink`/`getById` additions the Teacher/Parent modules required (AD-011 and the parent-link contract); the module reopens narrowly for these, not a full unfreeze.
 ² `findUserByEmail`/`findByEmail` were added narrowly to support Teacher/Parent cross-module lookups (no passwordHash exposed) — same narrow-reopening pattern as Student's additions, not a full unfreeze.
+³ Analytics subscribes to every event type published by every other module (see AD-012) — it reopens no other module's code (only imports each module's `*.events.ts` constants/types, the same read-only pattern MasteryRecord already established), so "frozen" here describes analytics' own write path, not a reopening of any other module.
 
 **Production Readiness**
 - ☐ OpenAPI complete
@@ -170,7 +171,7 @@ No load-testing tooling is wired up yet — these are targets to design against,
 ✅ MasteryRecord
 ✅ Teacher
 ✅ Parent
-⬜ Analytics
+✅ Analytics
 ⬜ Notification
 ⬜ AI
 ⬜ Deployment
@@ -200,7 +201,7 @@ Analytics
     ↓
 AI
 ```
-Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnostic/Practice must precede Mastery (it projects their events). Mastery should precede AI (`recommendation`/`study-plan` need real mastery data to reason over, not just events to subscribe to). Teacher and Parent both depend on Student for their two-aggregate link contracts (AD-011 and the parent-link case respectively).
+Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnostic/Practice must precede Mastery (it projects their events). Mastery should precede AI (`recommendation`/`study-plan` need real mastery data to reason over, not just events to subscribe to). Teacher and Parent both depend on Student for their two-aggregate link contracts (AD-011 and the parent-link case respectively). Analytics doesn't strictly depend on Teacher/Parent finishing first (it only imports each module's `*.events.ts` constants/types) — it was simply built last because it subscribes to every event type every other module publishes (AD-012), so building it after all seven producer modules existed meant one pass instead of revisiting it per new module.
 
 **Decisions Frozen** (do not reopen absent a bug or genuine architectural issue):
 - Authentication
@@ -210,6 +211,7 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - Practice module
 - Teacher module (see AD-011 for the ClassGroup↔StudentProfile write path)
 - Parent module (link verification is a documented placeholder — see Known Risks — not a design gap in the frozen contract itself)
+- Analytics module (see AD-012 for the explicit-per-event-type subscription approach)
 
 **Known Risks**
 - `MasteryRecord` is the first read model with a hard "only these event handlers may write it" rule (DOMAIN_MODEL.md §2.9) — nothing DB-enforces this, so it depends entirely on code-review discipline holding, same as the prerequisite-DAG cycle check.
@@ -219,15 +221,19 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - Diagnostic's next-question selection is a simplified heuristic (2 items/topic, difficulty ±1 on correct/incorrect), not a real IRT/adaptive-testing model — fine for a first working version, but the grade/theta mapping in `diagnostic.service.ts` (`mapThetaToGrade`) is a linear placeholder that will need real psychometric backing before this ships to real students.
 - AD-011's two-write enrollment (ClassGroup then StudentProfile) is not a distributed transaction — if the second write fails after the first succeeds, `StudentProfile.classIds` and `ClassGroup.activeStudentIds` can drift until a reconciliation job (ARCHITECTURE.md §21.3) exists. No such job is built yet — same open gap as the parent-link case it mirrors.
 - Parent verification uses knowledge of the child's registered email as a placeholder proof of guardianship, not a real double-opt-in flow — anyone who knows (or guesses/phishes) a student's account email can currently link themselves as that student's parent. Acceptable for a pre-launch build, but must be replaced with real verification (Notification-backed double opt-in, or school-mediated confirmation) before real users are onboarded.
+- Analytics has no wildcard event subscription (AD-012) — a new event type published by any module is silently absent from the analytics/audit log until `analytics.service.ts` is updated to add an explicit handler for it. Nothing fails loudly; this depends on code-review discipline the same way MasteryRecord's single-writer rule does.
+- `AnalyticsEvent` has no retention/TTL policy yet (DOMAIN_MODEL.md §5 flagged this as an open question, not yet decided) — it is the fastest-growing collection in the system and will need a number (e.g. raw events retained N months, then archived) before production.
 
 **Tech Debt**
-- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, Practice, Mastery, Teacher, and Parent endpoints aren't documented there yet.
+- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, Practice, Mastery, Teacher, Parent, and Analytics endpoints aren't documented there yet.
 - `domain/grading`'s algebraic grader is a normalized string match against `acceptedForms`, not true symbolic equivalence (e.g. "2x+4" vs "4+2x" would fail) — needs a CAS-backed check eventually.
 - `domain/grading`'s multi-step grader is a JSON deep-equality check per step — fine for primitive step answers, not a general structural-equivalence engine.
 - `mastery.service`'s diagnostic-completion bootstrap approximates a fractional `topicBreakdown` score as pass/fail against a 0.5 threshold (`upsertFromAttempt` only accepts a boolean) — loses the fractional granularity DOMAIN_MODEL.md's diagnostic breakdown actually carries.
 - No background reconciliation job exists yet for either two-aggregate write contract (parent-link or AD-011's class-enrollment) — both are documented as eventually-consistent-on-failure, not actually monitored/repaired.
 - Parent's link-by-email verification (see Known Risks) needs a real double-opt-in or school-mediated flow before production — currently the weakest trust boundary in the codebase.
 - No background reconciliation job exists yet for either two-aggregate write contract (parent-link or AD-011's class-enrollment) — both are documented as eventually-consistent-on-failure, not actually monitored/repaired.
+- Analytics' two read endpoints (`GET /analytics/students/:studentId/events`, `GET /analytics/events/count`) are minimal reporting primitives (indexed reads, no aggregation pipeline) — real teacher/admin dashboards will need proper aggregation queries once a concrete reporting requirement exists (ARCHITECTURE.md §13 guidance: build the aggregation pipeline only once a real latency problem appears, not preemptively).
+- `DiagnosticCompleted` and `PracticeItemSubmitted` don't carry their own attempt/session id in their event payload, so analytics' projected `AnalyticsEvent.aggregateId` for those two event types points at the student/question instead of the actual attempt/session document — documented in `analytics.service.ts`, not a data-loss bug (the source records are still fully queryable through `diagnostic`/`practice` directly).
 
 ---
 
@@ -257,7 +263,7 @@ Topic prerequisite-graph acyclicity (BFS cycle check in `curriculum.service.addP
 
 ### AD-006 — Domain events are in-process, swappable later
 `EventBus` is an interface; `InProcessEventBus` is the day-one implementation. A durable/outbox-backed implementation can replace it later without touching a single publisher or subscriber call site.
-**Status:** Frozen (implementation may change; the interface boundary may not) · **Introduced:** v0.1.0 · **Last reviewed:** v0.6.0
+**Status:** Frozen (implementation may change; the interface boundary may not) · **Introduced:** v0.1.0 · **Last reviewed:** v0.9.0
 
 ### AD-007 — `isCorrect` is computed once, never recomputed
 Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect` at submission time via `domain/grading`. A later correction to a question's `answerKey` must never retroactively rewrite a student's historical result — historical attempts are immutable records of what happened.
@@ -287,6 +293,21 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 
 **Status:** Frozen · **Introduced:** v0.7.0 · **Last reviewed:** v0.7.0
 
+### AD-012 — Analytics subscribes per-event-type; there is no wildcard "any event" subscription
+
+**Decision:** DOMAIN_MODEL.md §2.13 describes `AnalyticsEvent` as written by "a dedicated `analytics.onAnyEvent` subscriber" on behalf of every module. `EventBus` (AD-006) has no wildcard subscription and its interface is frozen, so `analytics.service.ts` instead subscribes individually to every event type currently published by every other module (15 handlers across `auth`, `curriculum`, `diagnostic`, `practice`, `teacher`, `parent`, `student`), mapping each to an `AnalyticsEvent` with an explicit, per-event-type payload — never a raw spread of the source payload.
+
+**Why:** Two constraints together rule out a literal wildcard subscriber: (1) AD-006 explicitly reserves the right to change `InProcessEventBus`'s implementation but freezes its interface, so adding a `subscribeAll`/wildcard method is off the table without reopening a decision the user has already frozen; (2) some published payloads carry secrets that must never reach a durable, queryable audit log — `auth.PasswordResetRequested` includes a raw password-reset token (see `auth.service.ts`), which a naive "persist the whole payload" wildcard handler would have written straight into `AnalyticsEvent.payload`. An explicit per-event-type mapper, one that whitelists exactly which fields to store, closes that hole by construction instead of relying on someone remembering to redact it later. This mirrors the same explicit-import pattern `mastery.service` already established for its two events (AD-005) — Analytics is simply the first module to apply it to every event type in the system at once, not a new pattern.
+
+**Alternatives considered:**
+1. *Add a wildcard `subscribeAll` method to the `EventBus` interface.* Rejected — violates AD-006's frozen-interface guarantee for a convenience that doesn't change what's actually storable (a full audit trail still needs to omit secrets per event type either way).
+2. *Have every publishing module call `analytics.service.record(...)` directly alongside `eventBus.publish(...)`.* Rejected — DOMAIN_MODEL.md §2.13 is explicit that analytics is written to "not by `analytics` calling out to other modules," i.e. the direction should be analytics listening, not seven other services taking on a second call per event; would also mean every future new event type requires a change in the *publishing* module, not just analytics.
+3. *Spread the entire event payload into `AnalyticsEvent.payload` for every subscription* (a middle ground: no wildcard bus method, but a generic handler applied per type). Rejected once `auth.PasswordResetRequested`'s `rawToken` was noticed — this would have created a live vulnerability (a secret sitting in an admin-readable audit-log collection). Explicit per-event-type field whitelisting was chosen instead.
+
+**Known limitation:** a new event type added by any module is silently absent from analytics until this file's subscription list is updated to match — tracked in Known Risks/Tech Debt above, same category of risk as MasteryRecord's single-writer convention (AD-005).
+
+**Status:** Frozen · **Introduced:** v0.9.0 · **Last reviewed:** v0.9.0
+
 ---
 
 ## Releases
@@ -301,6 +322,31 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 | v0.6.0 | MasteryRecord read model | `21028be` |
 | v0.7.0 | Teacher module (`TeacherProfile`/`School`/`ClassGroup`, AD-011) | `22baf3a` |
 | v0.8.0 | Parent module (`ParentProfile`, link/unlink by email) | `6e91541` |
+| v0.9.0 | Analytics module (`AnalyticsEvent`, AD-012) | `<pending>` |
+
+---
+
+## 2026-07-28 — Analytics module complete
+
+**Status:** TypeScript ✅ · ESLint ✅ · Tests ✅ (201/201, 23 suites) · commit `<pending>`
+
+**Completed**
+- `AnalyticsEvent` (DOMAIN_MODEL.md §2.13) — full repository interface → Mongoose model/repository → service → Zod validation → controller → routes → unit tests → integration tests.
+- `analytics.service` subscribes to all 15 event types currently published across `auth`, `curriculum`, `diagnostic`, `practice`, `teacher`, `parent`, and `student` (see AD-012 for why this is 15 explicit handlers rather than one wildcard subscriber), projecting each into an `AnalyticsEvent` with an explicit, per-event-type payload.
+- Two admin-only reporting reads: `GET /analytics/students/:studentId/events` (timeline, filterable by `eventType`, `limit`) and `GET /analytics/events/count` (count by `eventType`, optional `sinceDays` window) — deliberately simple indexed reads, no aggregation pipeline yet (ARCHITECTURE.md §13: build that only once a real dashboard-latency problem exists).
+- Removed the stale `src/modules/analytics/README.md` scaffold placeholder.
+
+**Architecture decisions**
+- **AD-012** (new) — resolves how `AnalyticsEvent` gets written given DOMAIN_MODEL.md's "onAnyEvent" language and AD-006's frozen `EventBus` interface. See the Architecture Decisions Log above; also documents why `auth.PasswordResetRequested`'s raw reset token is deliberately excluded from the persisted payload.
+
+**Known technical debt**
+- No wildcard event subscription exists (AD-012) — a new event type published by any future module needs a matching handler added to `analytics.service.ts`, or it's silently absent from the audit log.
+- `AnalyticsEvent` has no retention/TTL policy yet — DOMAIN_MODEL.md §5 flagged this as an open question before this session; still open, now the fastest-growing collection in the system.
+- `docs/openapi/auth.yaml` still doesn't cover Analytics' routes.
+- `DiagnosticCompleted`/`PracticeItemSubmitted` don't carry their own attempt/session id, so those two event types' projected `aggregateId` points at the student/question instead — documented in `analytics.service.ts`.
+
+**Next milestone**
+None queued per explicit scope instruction — Notification and AI are both still out of scope until requested.
 
 ---
 

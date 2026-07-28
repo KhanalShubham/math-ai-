@@ -16,6 +16,7 @@ import { MongoTeacherProfileRepository } from '../infrastructure/persistence/mon
 import { MongoSchoolRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-school.repository';
 import { MongoClassGroupRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-class-group.repository';
 import { MongoParentRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-parent.repository';
+import { MongoAnalyticsEventRepository } from '../infrastructure/persistence/mongoose/repositories/mongo-analytics-event.repository';
 import { createAuthService, type AuthService } from '../modules/auth/auth.service';
 import { createStudentService, type StudentService } from '../modules/student/student.service';
 import { createMasteryService, type MasteryService } from '../modules/student/mastery.service';
@@ -32,6 +33,7 @@ import {
 import { createPracticeService, type PracticeService } from '../modules/practice/practice.service';
 import { createTeacherService, type TeacherService } from '../modules/teacher/teacher.service';
 import { createParentService, type ParentService } from '../modules/parent/parent.service';
+import { createAnalyticsService, type AnalyticsService } from '../modules/analytics/analytics.service';
 
 /**
  * Manual composition root (ARCHITECTURE.md §13). No DI framework — the object
@@ -56,6 +58,7 @@ export interface Container {
   masteryService: MasteryService;
   teacherService: TeacherService;
   parentService: ParentService;
+  analyticsService: AnalyticsService;
 }
 
 export function createContainer(): Container {
@@ -113,6 +116,9 @@ export function createContainer(): Container {
     eventBus,
   });
 
+  const analyticsEventRepository = new MongoAnalyticsEventRepository();
+  const analyticsService = createAnalyticsService({ analyticsEventRepository, eventBus });
+
   return {
     logger,
     eventBus,
@@ -126,5 +132,6 @@ export function createContainer(): Container {
     masteryService,
     teacherService,
     parentService,
+    analyticsService,
   };
 }
