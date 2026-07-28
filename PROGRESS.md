@@ -30,38 +30,38 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 | | |
 |---|---|
-| **Current Version** | v0.7.0 |
+| **Current Version** | v0.8.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `22baf3a` |
-| **Backend Modules Complete** | 6 / 10 (+ MasteryRecord read model) |
-| **Overall Progress** | ~65% |
-| **Test Status** | 164/164 passing (19 suites) |
+| **Latest Commit** | `6e91541` |
+| **Backend Modules Complete** | 7 / 10 (+ MasteryRecord read model) |
+| **Overall Progress** | ~75% |
+| **Test Status** | 184/184 passing (21 suites) |
 | **TypeScript** | clean |
 | **ESLint** | clean |
 
 **Milestone Progress**
 ```
-███████████████████░░░░░░░░░░░ 65%
+██████████████████████░░░░░░░ 75%
 ```
 
 **Active Milestone**
-Parent module
+None — Teacher and Parent both complete; awaiting direction for Analytics, Notification, or AI (see stop condition below)
 
 **Current Task**
-Read DOMAIN_MODEL.md §2.3 (`ParentProfile`) — design `parent.repository.interface.ts`; the two-aggregate link contract (`ParentProfile` owns link creation, calls `student.service.addParentLink` as the commit step) is already implemented on the Student side and waiting to be called
+None in progress. Per explicit instruction, do not begin Notification, Analytics, AI, Deployment, CI/CD, or OpenAPI work until requested.
 
 **Next Task**
-Decide and document the parent-verification mechanism (DOMAIN_MODEL.md deliberately leaves "verification flow" abstract) — plan: parent supplies the child's registered account email as proof of relationship, resolved via the new `authService.findUserByEmail`; a real double-opt-in flow needs Notification infra that's explicitly out of scope for this milestone
+—
 
 **Then**
-Mongoose model/repository → service → Zod validation → controller → routes → unit tests → integration tests → commit
+—
 
 **Project Health**
 - ✅ Build passing
 - ✅ Tests passing
 - ✅ Lint clean
 - ✅ Types clean
-- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic/Practice/Mastery/Teacher undocumented)
+- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic/Practice/Mastery/Teacher/Parent undocumented)
 - ⚠️ Deployment/observability not yet started
 
 **Architecture Status**
@@ -72,20 +72,20 @@ Mongoose model/repository → service → Zod validation → controller → rout
 **Repository Metrics**
 | | |
 |---|---|
-| Commits | 14 |
-| Tests | 164 |
-| Suites | 19 |
+| Commits | 16 |
+| Tests | 184 |
+| Suites | 21 |
 | Coverage | not measured yet |
 | Build | Passing |
 
 **Codebase Size**
 | | |
 |---|---|
-| Source files (`src/`) | 106 |
-| Lines of code (`src/`) | ~5,371 |
-| Domain modules (`src/modules/`) | 10 (6 implemented, 4 scaffolded) |
-| API endpoints | 46 |
-| Test files | 20 |
+| Source files (`src/`) | 115 |
+| Lines of code (`src/`) | ~5,807 |
+| Domain modules (`src/modules/`) | 10 (7 implemented, 3 scaffolded) |
+| API endpoints | 53 |
+| Test files | 22 |
 
 **Module Completion**
 
@@ -98,12 +98,12 @@ Mongoose model/repository → service → Zod validation → controller → rout
 | Practice | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
 | MasteryRecord (student addition) | ✅ Complete | 2026-07-28 | 2026-07-28 |
 | Teacher | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
-| Parent | 🚧 In Progress | 2026-07-28 | — |
+| Parent | ✅ Complete (frozen) | 2026-07-28 | 2026-07-28 |
 | Notification | ⏳ Planned | — | — |
 | Analytics | ⏳ Planned | — | — |
 | AI | ⏳ Planned | — | — |
 
-¹ `StudyPlan` (DOMAIN_MODEL.md §2.10) is still owned by `student` but not yet built — "frozen" describes `StudentProfile` + `MasteryRecord` + the narrow `addClassLink`/`removeClassLink`/`removeParentLink`/`getById` additions the Teacher module required (AD-011); the module reopens narrowly for these, not a full unfreeze.
+¹ `StudyPlan` (DOMAIN_MODEL.md §2.10) is still owned by `student` but not yet built — "frozen" describes `StudentProfile` + `MasteryRecord` + the narrow `addClassLink`/`removeClassLink`/`removeParentLink`/`getById` additions the Teacher/Parent modules required (AD-011 and the parent-link contract); the module reopens narrowly for these, not a full unfreeze.
 ² `findUserByEmail`/`findByEmail` were added narrowly to support Teacher/Parent cross-module lookups (no passwordHash exposed) — same narrow-reopening pattern as Student's additions, not a full unfreeze.
 
 **Production Readiness**
@@ -140,7 +140,7 @@ No load-testing tooling is wired up yet — these are targets to design against,
 ✅ Practice
 ✅ MasteryRecord
 ✅ Teacher
-🚧 Parent
+✅ Parent
 ⬜ Analytics
 ⬜ Notification
 ⬜ AI
@@ -171,7 +171,7 @@ Analytics
     ↓
 AI
 ```
-Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnostic/Practice must precede Mastery (it projects their events). Mastery should precede AI (`recommendation`/`study-plan` need real mastery data to reason over, not just events to subscribe to).
+Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnostic/Practice must precede Mastery (it projects their events). Mastery should precede AI (`recommendation`/`study-plan` need real mastery data to reason over, not just events to subscribe to). Teacher and Parent both depend on Student for their two-aggregate link contracts (AD-011 and the parent-link case respectively).
 
 **Decisions Frozen** (do not reopen absent a bug or genuine architectural issue):
 - Authentication
@@ -180,6 +180,7 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - Diagnostic module
 - Practice module
 - Teacher module (see AD-011 for the ClassGroup↔StudentProfile write path)
+- Parent module (link verification is a documented placeholder — see Known Risks — not a design gap in the frozen contract itself)
 
 **Known Risks**
 - `MasteryRecord` is the first read model with a hard "only these event handlers may write it" rule (DOMAIN_MODEL.md §2.9) — nothing DB-enforces this, so it depends entirely on code-review discipline holding, same as the prerequisite-DAG cycle check.
@@ -188,13 +189,15 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - AI must never receive `answerKey` or ungraded student answers directly — enforced today by `toPublicQuestion`/`select:false`; every new module touching `Question`/grading must preserve this boundary.
 - Diagnostic's next-question selection is a simplified heuristic (2 items/topic, difficulty ±1 on correct/incorrect), not a real IRT/adaptive-testing model — fine for a first working version, but the grade/theta mapping in `diagnostic.service.ts` (`mapThetaToGrade`) is a linear placeholder that will need real psychometric backing before this ships to real students.
 - AD-011's two-write enrollment (ClassGroup then StudentProfile) is not a distributed transaction — if the second write fails after the first succeeds, `StudentProfile.classIds` and `ClassGroup.activeStudentIds` can drift until a reconciliation job (ARCHITECTURE.md §21.3) exists. No such job is built yet — same open gap as the parent-link case it mirrors.
-- Parent verification (next milestone) will use knowledge of the child's registered email as a placeholder proof of guardianship, not a real double-opt-in flow — flagged in advance so it isn't mistaken for a finished trust/safety feature.
+- Parent verification uses knowledge of the child's registered email as a placeholder proof of guardianship, not a real double-opt-in flow — anyone who knows (or guesses/phishes) a student's account email can currently link themselves as that student's parent. Acceptable for a pre-launch build, but must be replaced with real verification (Notification-backed double opt-in, or school-mediated confirmation) before real users are onboarded.
 
 **Tech Debt**
-- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, Practice, Mastery, and Teacher endpoints aren't documented there yet.
+- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, Practice, Mastery, Teacher, and Parent endpoints aren't documented there yet.
 - `domain/grading`'s algebraic grader is a normalized string match against `acceptedForms`, not true symbolic equivalence (e.g. "2x+4" vs "4+2x" would fail) — needs a CAS-backed check eventually.
 - `domain/grading`'s multi-step grader is a JSON deep-equality check per step — fine for primitive step answers, not a general structural-equivalence engine.
 - `mastery.service`'s diagnostic-completion bootstrap approximates a fractional `topicBreakdown` score as pass/fail against a 0.5 threshold (`upsertFromAttempt` only accepts a boolean) — loses the fractional granularity DOMAIN_MODEL.md's diagnostic breakdown actually carries.
+- No background reconciliation job exists yet for either two-aggregate write contract (parent-link or AD-011's class-enrollment) — both are documented as eventually-consistent-on-failure, not actually monitored/repaired.
+- Parent's link-by-email verification (see Known Risks) needs a real double-opt-in or school-mediated flow before production — currently the weakest trust boundary in the codebase.
 - No background reconciliation job exists yet for either two-aggregate write contract (parent-link or AD-011's class-enrollment) — both are documented as eventually-consistent-on-failure, not actually monitored/repaired.
 
 ---
@@ -268,7 +271,31 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 | v0.5.0 | Practice module | `78cc9c0` |
 | v0.6.0 | MasteryRecord read model | `21028be` |
 | v0.7.0 | Teacher module (`TeacherProfile`/`School`/`ClassGroup`, AD-011) | `22baf3a` |
-| v0.8.0 | Parent module (planned) | — |
+| v0.8.0 | Parent module (`ParentProfile`, link/unlink by email) | `6e91541` |
+
+---
+
+## 2026-07-28 — Parent module complete
+
+**Status:** TypeScript ✅ · ESLint ✅ · Tests ✅ (184/184, 21 suites) · commit `6e91541`
+
+**Completed**
+- `ParentProfile` (DOMAIN_MODEL.md §2.3) — full repository interface → Mongoose model/repository → service → Zod validation → controller → routes → unit tests → integration tests.
+- Two-aggregate link contract implemented exactly as specified: `ParentProfile` owns link creation (`linkStudentByEmail`), then calls the pre-existing `student.service.addParentLink` as the commit step. Unlink is symmetric (`unlinkStudent` → `student.service.removeParentLink`, added this session).
+- Supported per the brief: link parent (by email), unlink parent, guardian lookup (`GET /parent/guardians/:studentId`, admin-only), child lookup (`GET /parent/children`, reuses `student.service.getByParentId` rather than a new Student repository inside Parent).
+- Notification preferences (`email`/`sms` toggles) with a `PATCH /parent/preferences` endpoint — a minimal shape since DOMAIN_MODEL.md doesn't specify the field beyond naming it.
+
+**Architecture decisions**
+- No new AD — this module implements the two-aggregate contract DOMAIN_MODEL.md §2.3 already specifies in full, unlike Teacher's ClassGroup case which needed AD-011.
+- Verification-flow choice (email-based, not a formal AD): DOMAIN_MODEL.md deliberately leaves "verification flow" abstract, so this is a documented product-scope placeholder, not an architectural decision that could be "frozen" — it's expected to be replaced once Notification infra exists.
+
+**Known technical debt**
+- Parent's email-based verification has no real double opt-in — see Known Risks above. This is the weakest trust boundary currently in the codebase and should be prioritized before any real users are onboarded.
+- No reconciliation job yet for the parent-link two-write contract if the second write fails (same gap as AD-011).
+- `docs/openapi/auth.yaml` still doesn't cover Parent's routes.
+
+**Next milestone**
+None queued per explicit scope instruction — Teacher and Parent are both complete and frozen. Notification, Analytics, AI, Deployment, CI/CD, and OpenAPI work are all explicitly out of scope until requested.
 
 ---
 
