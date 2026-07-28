@@ -3,6 +3,27 @@
 Living checkpoint file. Updated after each significant change so the project
 state is visible without re-scanning the codebase. Newest entry on top.
 
+**Workflow for every milestone:** read this file → confirm the active milestone → read only the required architecture/domain sections → implement one complete module → run TypeScript + ESLint + unit tests + integration tests → commit → update this file → push → stop. No exceptions.
+
+**Standard entry template** for each dated section below:
+```
+## YYYY-MM-DD — <Module> complete
+
+**Status:** TypeScript ✅ · ESLint ✅ · Tests ✅ (N/N, M suites) · commit `<hash>`
+
+**Completed**
+- ...
+
+**Architecture decisions**
+- ... (link an AD-NNN if it introduced or confirmed one)
+
+**Known technical debt**
+- ...
+
+**Next milestone**
+- ...
+```
+
 ## Quick Reference
 
 | | |
@@ -128,6 +149,66 @@ Mongoose models/repositories → service → Zod validation → controller → r
 - `domain/grading`'s algebraic grader is a normalized string match against `acceptedForms`, not true symbolic equivalence (e.g. "2x+4" vs "4+2x" would fail) — needs a CAS-backed check eventually.
 - `domain/grading`'s multi-step grader is a JSON deep-equality check per step — fine for primitive step answers, not a general structural-equivalence engine.
 - `mastery.service`'s diagnostic-completion bootstrap approximates a fractional `topicBreakdown` score as pass/fail against a 0.5 threshold (`upsertFromAttempt` only accepts a boolean) — loses the fractional granularity DOMAIN_MODEL.md's diagnostic breakdown actually carries.
+
+---
+
+## Architecture Decisions Log
+
+Permanent record of major design decisions — the "why," not just the "what." Add a new AD-NNN entry when a decision is made that a future contributor could plausibly second-guess or accidentally undo; don't log routine implementation choices.
+
+### AD-001 — Repositories are behavior-oriented, not CRUD
+`updateEstimatedGrade(studentId, grade)`, not a generic `update(student)`. Prevents accidental writes to fields with special rules (e.g. `currentEstimatedGrade`, `answerKey`) by construction, not by convention alone.
+**Status:** Frozen
+
+### AD-002 — One module owns one collection
+Every collection has exactly one owning module's repository as its only sanctioned write path. Other modules read only through that module's *service*, never a second repository over the same collection.
+**Status:** Frozen
+
+### AD-003 — AI never grades
+`domain/grading` has no import path to `infrastructure/ai` at all — not a policy, a structural fact about the codebase. Correctness is deterministic and auditable; AI is enrichment (hints, explanations), never the source of truth for whether an answer is right.
+**Status:** Frozen
+
+### AD-004 — `Question.answerKey` never leaves the repository boundary
+Stripped by a dedicated `toPublicQuestion` mapper (and backed by `select: false` at the schema level) everywhere except the one admin-only internal read path. Enforced by tests, not by trusting every controller to remember to omit it.
+**Status:** Frozen
+
+### AD-005 — Constraints MongoDB can't express are enforced in the service layer, explicitly
+Topic prerequisite-graph acyclicity (BFS cycle check in `curriculum.service.addPrerequisite`) and MasteryRecord's single-writer rule (`upsertFromAttempt` called only from its two event handlers) both depend on code-review discipline, not a database constraint. This is tracked as a standing risk in Known Risks, not silently assumed safe.
+**Status:** Frozen
+
+### AD-006 — Domain events are in-process, swappable later
+`EventBus` is an interface; `InProcessEventBus` is the day-one implementation. A durable/outbox-backed implementation can replace it later without touching a single publisher or subscriber call site.
+**Status:** Frozen (implementation may change; the interface boundary may not)
+
+### AD-007 — `isCorrect` is computed once, never recomputed
+Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect` at submission time via `domain/grading`. A later correction to a question's `answerKey` must never retroactively rewrite a student's historical result — historical attempts are immutable records of what happened.
+**Status:** Frozen
+
+### AD-008 — Manual composition root, no DI framework
+`container.ts` wires every concrete repository/service by hand. The object graph is shallow enough that explicit wiring is more readable and debuggable than decorator-based injection.
+**Status:** Frozen
+
+### AD-009 — Admin accounts are provisioned out-of-band
+`role: 'admin'` is not reachable via `/auth/register` — self-registration only allows `student`/`teacher`/`parent`. Integration tests mint admin JWTs directly (`signAccessToken`) rather than going through a registration flow that intentionally doesn't exist.
+**Status:** Frozen
+
+### AD-010 — Verification and refresh tokens are dedicated collections, not fields on `User`
+`VerificationToken` (email verification + password reset, one active token per user/type) and `RefreshToken` (rotation, theft detection) each got their own collection instead of accumulating token fields on `User` — the same pattern extends cleanly to future flows (magic links, invitations) without touching `User`'s schema again.
+**Status:** Frozen
+
+---
+
+## Releases
+
+| Version | Milestone | Commit |
+|---|---|---|
+| v0.1.0 | Backend Foundation + Authentication module | `38296b5` |
+| v0.2.0 | Student module | `f484bb5` |
+| v0.3.0 | Curriculum module (Topic graph + Question bank) | `c027d58` |
+| v0.4.0 | Diagnostic module + `domain/grading` | `1f73876` |
+| v0.5.0 | Practice module | `78cc9c0` |
+| v0.6.0 | MasteryRecord read model | `21028be` |
+| v0.7.0 | Teacher module (planned) | — |
 
 ---
 
