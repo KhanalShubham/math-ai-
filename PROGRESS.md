@@ -7,6 +7,26 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 **Keep this file in sync with every meaningful commit, not just milestone completions** — at minimum, the Quick Reference's commit hash/test counts should never lag behind `git log`. A full dated history entry (via the template below) is still reserved for milestone-sized units of work; a one-line Quick Reference bump is enough for smaller in-flight commits so the file is never stale if work stops unexpectedly.
 
+## Session Resume Checklist
+
+**Before writing code:**
+- [ ] Pull latest `main`
+- [ ] Read this file (`PROGRESS.md`)
+- [ ] Confirm the active milestone (see Quick Reference → Active Milestone)
+- [ ] Read only the required architecture/domain sections for that milestone
+- [ ] Review Known Risks and Tech Debt for anything the milestone touches
+- [ ] Check for uncommitted changes (`git status`)
+- [ ] Start implementation
+
+**Before stopping:**
+- [ ] TypeScript clean
+- [ ] ESLint clean
+- [ ] Unit tests passing
+- [ ] Integration tests passing
+- [ ] Commit
+- [ ] Update this file (Quick Reference at minimum — see sync rule below)
+- [ ] Push
+
 **Standard entry template** for each dated section below:
 ```
 ## YYYY-MM-DD — <Module> complete
@@ -46,6 +66,15 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 **Active Milestone**
 None — Teacher and Parent both complete; awaiting direction for Analytics, Notification, or AI (see stop condition below)
+
+**Current Focus**
+Teacher → Parent (both complete; next module not yet chosen)
+
+**Blocked By**
+None
+
+**Next Architectural Decision**
+Reconciliation strategy for `ClassGroup.activeStudentIds` ↔ `StudentProfile.classIds` drift on partial AD-011 write failure (mirrors the same open gap on the parent-link contract)
 
 **Current Task**
 None in progress. Per explicit instruction, do not begin Notification, Analytics, AI, Deployment, CI/CD, or OpenAPI work until requested.
