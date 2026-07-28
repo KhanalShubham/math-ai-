@@ -8,6 +8,7 @@ import { STUDENT_EVENTS } from '../../src/modules/student/student.events';
 import { PRACTICE_EVENTS } from '../../src/modules/practice/practice.events';
 import { TEACHER_EVENTS } from '../../src/modules/teacher/teacher.events';
 import { PARENT_EVENTS } from '../../src/modules/parent/parent.events';
+import { AnalyticsEventModel } from '../../src/infrastructure/persistence/mongoose/models/analytics-event.model';
 
 describe('analytics routes (integration, real Mongo) — projected from real events', () => {
   let mongod: MongoMemoryServer;
@@ -216,5 +217,13 @@ describe('analytics routes (integration, real Mongo) — projected from real eve
       .query({ eventType: STUDENT_EVENTS.StudentEnrolled });
 
     expect(res.status).toBe(403);
+  });
+
+  it('enforces an 18-month TTL delete on AnalyticsEvent via a real Mongo TTL index (AD-013)', async () => {
+    const indexes = await AnalyticsEventModel.collection.indexes();
+    const ttlIndex = indexes.find((index) => index.key?.occurredAt === 1 && 'expireAfterSeconds' in index);
+
+    expect(ttlIndex).toBeDefined();
+    expect(ttlIndex?.expireAfterSeconds).toBe(18 * 30 * 24 * 60 * 60);
   });
 });

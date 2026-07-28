@@ -379,7 +379,7 @@ MasteryRepository {
 
 **This collection doubles as the durable event log** referenced in the architecture doc's future durable-event-bus design (§21.1) — every in-process event handler run also writes here as a side effect via a dedicated `analytics.onAnyEvent` subscriber, giving an audit trail and rebuild source from day one even while the bus itself stays in-process.
 
-**Indexes:** `{ studentId: 1, occurredAt: -1 }` · `{ eventType: 1, occurredAt: -1 }` · consider a TTL or archival policy once volume is material (§6).
+**Indexes:** `{ studentId: 1, occurredAt: -1 }` · `{ eventType: 1, occurredAt: -1 }` · `{ occurredAt: 1 }` with `expireAfterSeconds` set to an 18-month retention window (PROGRESS.md AD-013 — resolves the retention question left open in §5).
 
 ---
 
@@ -435,7 +435,7 @@ Every interface above lives in its owning module's folder (`modules/<module>/<x>
 ## 5. Open questions / recommendations before scaffolding
 
 1. ~~Notification as its own module?~~ **Resolved** — formalized as `notification` in the architecture doc's amended module table (§21) and reflected in §2.12 above.
-2. **`AnalyticsEvent` retention policy** needs a number, not just "consider a TTL" — recommend deciding now (e.g. raw events retained 18 months, then archived/aggregated) since this collection grows unboundedly and fastest of any in the system, and retention interacts with the children's-data compliance point already flagged in the architecture doc.
+2. ~~`AnalyticsEvent` retention policy~~ **Resolved** — 18-month hard TTL delete (no archival tier), formalized as PROGRESS.md AD-013 and reflected in §2.13 above.
 3. **`dateOfBirth` and other minor-PII fields** should get a documented field-level access policy (who can read it — not even all teachers may need to) before the `student` module's repository is implemented, not added after the fact as a patch.
 
 Recommend resolving these three before backend scaffolding begins; none of them changes the shape of the model above, but all three change repository method signatures (field-level access control, retention-aware queries) if decided after the fact instead of now.

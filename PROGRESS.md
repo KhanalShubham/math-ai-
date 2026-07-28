@@ -50,12 +50,12 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 | | |
 |---|---|
-| **Current Version** | v0.9.0 |
+| **Current Version** | v0.9.1 |
 | **Current Branch** | main |
-| **Latest Commit** | `f969f11` |
+| **Latest Commit** | `<pending>` |
 | **Backend Modules Complete** | 8 / 10 (+ MasteryRecord read model) |
 | **Overall Progress** | ~85% |
-| **Test Status** | 201/201 passing (23 suites) |
+| **Test Status** | 202/202 passing (23 suites) |
 | **TypeScript** | clean |
 | **ESLint** | clean |
 
@@ -101,8 +101,8 @@ None in progress. Per explicit instruction, do not begin Notification, AI, Deplo
 **Repository Metrics**
 | | |
 |---|---|
-| Commits | 18 |
-| Tests | 201 |
+| Commits | 20 |
+| Tests | 202 |
 | Suites | 23 |
 | Coverage | not measured yet |
 | Build | Passing |
@@ -222,7 +222,7 @@ Curriculum must precede Diagnostic/Practice (both reference `Question`). Diagnos
 - AD-011's two-write enrollment (ClassGroup then StudentProfile) is not a distributed transaction — if the second write fails after the first succeeds, `StudentProfile.classIds` and `ClassGroup.activeStudentIds` can drift until a reconciliation job (ARCHITECTURE.md §21.3) exists. No such job is built yet — same open gap as the parent-link case it mirrors.
 - Parent verification uses knowledge of the child's registered email as a placeholder proof of guardianship, not a real double-opt-in flow — anyone who knows (or guesses/phishes) a student's account email can currently link themselves as that student's parent. Acceptable for a pre-launch build, but must be replaced with real verification (Notification-backed double opt-in, or school-mediated confirmation) before real users are onboarded.
 - Analytics has no wildcard event subscription (AD-012) — a new event type published by any module is silently absent from the analytics/audit log until `analytics.service.ts` is updated to add an explicit handler for it. Nothing fails loudly; this depends on code-review discipline the same way MasteryRecord's single-writer rule does.
-- `AnalyticsEvent` has no retention/TTL policy yet (DOMAIN_MODEL.md §5 flagged this as an open question, not yet decided) — it is the fastest-growing collection in the system and will need a number (e.g. raw events retained N months, then archived) before production.
+- `AnalyticsEvent`'s 18-month TTL (AD-013) is a hard delete, not archive-then-delete — once a document expires it is gone, with no aggregated/rolled-up record surviving it. Acceptable today since no reporting feature depends on data older than 18 months, but revisit before any dashboard promises multi-year trend data.
 
 **Tech Debt**
 - `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, Diagnostic, Practice, Mastery, Teacher, Parent, and Analytics endpoints aren't documented there yet.
@@ -308,6 +308,19 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 
 **Status:** Frozen · **Introduced:** v0.9.0 · **Last reviewed:** v0.9.0
 
+### AD-013 — `AnalyticsEvent` retention: 18-month hard TTL delete, no archival tier
+
+**Decision:** `AnalyticsEvent` documents are hard-deleted by a MongoDB TTL index (`{ occurredAt: 1 }`, `expireAfterSeconds` set to 18 months) — a single-field index separate from the two compound query indexes, since MongoDB TTL indexes cannot be compound. There is no archival/cold-storage step first; once a document ages out, it is gone.
+
+**Why:** DOMAIN_MODEL.md §5 flagged this as an open question needing "a number, not just consider a TTL," since `AnalyticsEvent` is the fastest-growing collection in the system and doubles as the durable event/audit log (§2.13). Leaving it unbounded is both a cost problem and, per ARCHITECTURE.md's children's-data-compliance challenge (UK GDPR / Age Appropriate Design Code favor data minimization), a growing compliance liability with no offsetting product benefit — nothing in the current product reads `AnalyticsEvent` data older than the current/previous academic year. 18 months covers a full academic year (~10 months) plus a buffer for year-over-year comparison in a future teacher/admin dashboard, which was DOMAIN_MODEL.md's own suggested figure.
+
+**Alternatives considered:**
+1. *No TTL — retain forever.* Rejected — unbounded growth in the system's fastest-growing collection, with no offsetting requirement to keep raw event history indefinitely, and the largest children's-data retention surface in the system.
+2. *Archive to cold storage/a data warehouse before deleting.* Rejected for now — no archival infrastructure exists (no S3/warehouse target), and no concrete reporting requirement currently needs data past the live window. Building an archival pipeline today would be exactly the kind of speculative infrastructure ARCHITECTURE.md counsels against building before a real need appears (same reasoning already applied to read replicas and aggregation pipelines elsewhere in that doc). If a real multi-year reporting requirement appears later, the answer is a periodic rollup job that pre-aggregates into a smaller, longer-retained summary collection — not keeping raw `AnalyticsEvent` around forever.
+3. *A shorter window (e.g. 90 days).* Rejected — too short to support the year-over-year comparisons a teacher/admin dashboard would plausibly want; 18 months balances usefulness against minimization better than an arbitrarily short window would.
+
+**Status:** Frozen · **Introduced:** v0.9.1 · **Last reviewed:** v0.9.1
+
 ---
 
 ## Releases
@@ -323,6 +336,7 @@ Both `DiagnosticAttempt.items[]` and `PracticeSession.items[]` store `isCorrect`
 | v0.7.0 | Teacher module (`TeacherProfile`/`School`/`ClassGroup`, AD-011) | `22baf3a` |
 | v0.8.0 | Parent module (`ParentProfile`, link/unlink by email) | `6e91541` |
 | v0.9.0 | Analytics module (`AnalyticsEvent`, AD-012) | `f969f11` |
+| v0.9.1 | `AnalyticsEvent` retention policy — 18-month TTL delete (AD-013) | `<pending>` |
 
 ---
 
