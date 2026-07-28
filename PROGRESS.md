@@ -7,38 +7,38 @@ state is visible without re-scanning the codebase. Newest entry on top.
 
 | | |
 |---|---|
-| **Current Version** | v0.3.0 |
+| **Current Version** | v0.4.0 |
 | **Current Branch** | main |
-| **Latest Commit** | `1c606d2` |
-| **Backend Modules Complete** | 3 / 10 |
-| **Overall Progress** | ~30% |
-| **Test Status** | 86/86 passing (10 suites) |
+| **Latest Commit** | `1f73876` |
+| **Backend Modules Complete** | 4 / 10 |
+| **Overall Progress** | ~40% |
+| **Test Status** | 111/111 passing (13 suites) |
 | **TypeScript** | clean |
 | **ESLint** | clean |
 
 **Milestone Progress**
 ```
-██████████░░░░░░░░░░░░░░░░░░░░ 30%
+████████████░░░░░░░░░░░░░░░░░░ 40%
 ```
 
 **Active Milestone**
-Diagnostic module
+Practice module
 
 **Current Task**
-Implement `DiagnosticAttempt` repository (DOMAIN_MODEL.md §2.7): `diagnostic.repository.interface.ts` + Mongoose model/repository
+Read DOMAIN_MODEL.md §2.8 (`PracticeSession`) and design `practice.repository.interface.ts`
 
 **Next Task**
-Diagnostic service (grading hook, `findInProgressForStudent` enforcement, `DiagnosticCompleted` event)
+Practice service (reuses `domain/grading.evaluateAnswer`, same "compute once, never recompute" rule as Diagnostic; publishes `PracticeAttemptSubmitted`)
 
 **Then**
-Zod validation → controller → routes → unit tests → integration tests → commit
+Mongoose model/repository → Zod validation → controller → routes → unit tests → integration tests → commit
 
 **Project Health**
 - ✅ Build passing
 - ✅ Tests passing
 - ✅ Lint clean
 - ✅ Types clean
-- ⚠️ OpenAPI incomplete (Student/Curriculum undocumented)
+- ⚠️ OpenAPI incomplete (Student/Curriculum/Diagnostic undocumented)
 - ⚠️ Deployment/observability not yet started
 
 **Architecture Status**
@@ -49,9 +49,9 @@ Zod validation → controller → routes → unit tests → integration tests �
 **Repository Metrics**
 | | |
 |---|---|
-| Commits | 8 |
-| Tests | 86 |
-| Suites | 10 |
+| Commits | 10 |
+| Tests | 111 |
+| Suites | 13 |
 | Coverage | not measured yet |
 | Build | Passing |
 
@@ -62,8 +62,8 @@ Zod validation → controller → routes → unit tests → integration tests �
 | Auth | ✅ Complete (frozen) |
 | Student | ✅ Complete (frozen) |
 | Curriculum | ✅ Complete (frozen) |
-| Diagnostic | 🚧 In Progress |
-| Practice | ⏳ Planned |
+| Diagnostic | ✅ Complete (frozen) |
+| Practice | 🚧 In Progress |
 | Teacher | ⏳ Planned |
 | Parent | ⏳ Planned |
 | Notification | ⏳ Planned |
@@ -76,8 +76,8 @@ Zod validation → controller → routes → unit tests → integration tests �
 ✅ Authentication
 ✅ Student
 ✅ Curriculum
-🚧 Diagnostic
-⬜ Practice
+✅ Diagnostic
+🚧 Practice
 ⬜ Teacher
 ⬜ Parent
 ⬜ Analytics
@@ -90,15 +90,50 @@ Zod validation → controller → routes → unit tests → integration tests �
 - Authentication
 - Student module
 - Curriculum module
+- Diagnostic module
 
 **Known Risks**
-- Diagnostic's grading/scoring logic will shape Practice's design (same `domain/grading` strategies, same "compute once, never recompute" rule) — get Diagnostic right before starting Practice.
-- The AI module (`hint`, `tutor`, `recommendation`, `study-plan`) depends on `DiagnosticCompleted`/`MasteryRecord` events existing first — it cannot be usefully started before Diagnostic and the mastery read model.
+- Practice reuses the exact same `domain/grading` engine and "compute once, never recompute" rule as Diagnostic — any grading change must be validated against both modules' tests, not just one.
+- The AI module (`hint`, `tutor`, `recommendation`, `study-plan`) depends on `DiagnosticCompleted`/`MasteryRecord` events existing first — it cannot be usefully started before Practice and the mastery read model.
 - `EventBus` is in-process/in-memory only — a process restart drops any in-flight event; fine for day-one, but the event log is not yet durable (ARCHITECTURE.md §21.1 flags this as a deliberate, revisitable choice, not an oversight).
 - AI must never receive `answerKey` or ungraded student answers directly — enforced today by `toPublicQuestion`/`select:false`; every new module touching `Question`/grading must preserve this boundary.
+- Diagnostic's next-question selection is a simplified heuristic (2 items/topic, difficulty ±1 on correct/incorrect), not a real IRT/adaptive-testing model — fine for a first working version, but the grade/theta mapping in `diagnostic.service.ts` (`mapThetaToGrade`) is a linear placeholder that will need real psychometric backing before this ships to real students.
 
 **Tech Debt**
-- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student and Curriculum endpoints aren't documented there yet.
+- `docs/openapi/auth.yaml` is the only OpenAPI spec the server loads at `/docs` — Student, Curriculum, and Diagnostic endpoints aren't documented there yet.
+- `domain/grading`'s algebraic grader is a normalized string match against `acceptedForms`, not true symbolic equivalence (e.g. "2x+4" vs "4+2x" would fail) — needs a CAS-backed check eventually.
+- `domain/grading`'s multi-step grader is a JSON deep-equality check per step — fine for primitive step answers, not a general structural-equivalence engine.
+
+---
+
+## 2026-07-28 — Diagnostic module complete
+
+**Status:** TypeScript clean · ESLint clean · 111/111 tests passing (13 suites) · committed locally (`1f73876`, not yet pushed)
+
+**Completed this session**
+- **`domain/grading`** — the pure correctness engine (`evaluateAnswer`), graded per question type (mcq/numeric/algebraic/multi-step). Zero I/O, zero import path to `infrastructure/ai` (ARCHITECTURE.md §0 constraint #1). Algebraic/multi-step graders are simplified string/deep-equality checks, not true symbolic equivalence — flagged as tech debt above.
+- **Diagnostic module** — `DiagnosticAttempt` (DOMAIN_MODEL.md §2.7): bounded embedded `items[]`/`abilityEstimateHistory[]`, one in-progress attempt per student enforced in `startAttempt`, `isCorrect` computed once via `domain/grading` and never recomputed, publishes `DiagnosticCompleted` on completion. Question selection is a simple adaptive heuristic (2 items/topic, difficulty ±1 on correct/incorrect, theta ±0.5 clamped to [-3,3], linear theta→grade mapping) — explicitly documented as a placeholder, not real IRT.
+- Removed the stale `src/domain/grading/README.md` and `src/modules/diagnostic/README.md` scaffold placeholders now that both are implemented.
+- Fixed a real bug during integration testing: the Mongo repository's `toDiagnosticAttempt` mapper was spreading Mongoose subdocuments (`{...item}`), which silently drops schema-path fields because those accessors live on the prototype, not as own properties — replaced with explicit field-by-field mapping.
+
+**Repo commits so far**
+```
+1f73876 Add Diagnostic module and domain/grading correctness engine
+1c606d2 Extend PROGRESS.md with roadmap, health, risks, and metrics sections
+4ee5b82 Add PROGRESS.md checkpoint log and update for Curriculum module
+c027d58 Add Curriculum module (Topic graph + Question bank)
+f484bb5 Add Student module (profile CRUD, class/parent lookups)
+b66b1f4 Add root .gitignore
+6275d87 Move email/password-reset tokens to a dedicated VerificationToken collection
+ad0607c first commit
+38296b5 Backend foundation and Authentication module complete
+```
+
+**Scaffolded but NOT implemented yet** (README-only placeholders in `src/modules/`):
+`practice`, `teacher`, `parent`, `notification`, `analytics`, `ai` (hint/ocr/prompt-builder/recommendation/study-plan/tutor)
+
+**Recommended next milestone: Practice module**
+`PracticeSession` (DOMAIN_MODEL.md §2.8) — reuses `domain/grading` exactly like Diagnostic, but without the adaptive-selection complexity (student or curriculum picks the topic/question set directly). Publishes `PracticeAttemptSubmitted` for mastery/streak/analytics subscribers, per ARCHITECTURE.md §21.1's domain-events example.
 
 ---
 
